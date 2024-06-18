@@ -21,7 +21,7 @@ export const html = (strings, ...values) => {
  */
 export class _WC {
 	/**
-	 * @public
+	 * @private
 	 * @type {props_}
 	 */
 	props;
@@ -35,18 +35,17 @@ export class _WC {
 	 */
 	/**
 	 * @public
-	 * @param {string} tag
-	 * @param {string} html_template
-	 * @param {props_} props
 	 * @param {{
-	 * mount:(options:callback_on_options)=>void,
-	 * unmount:(options:callback_on_options)=>void,
+	 * tag:string,
+	 * html_template:string,
+	 * props:props_,
+	 * on_mount:(options:callback_on_options)=>(()=>void),
 	 * effect:(options:callback_on_options & {
 	 * prop_name:string,old_value:any,new_value:any
 	 * })=>void
-	 * }} callbacks_on
+	 * }} options
 	 */
-	constructor(tag, html_template, props, callbacks_on) {
+	constructor({ tag, html_template, props, on_mount, effect }) {
 		this.tag = `h-${tag}`;
 		this.props = props;
 		window.customElements.define(
@@ -67,29 +66,30 @@ export class _WC {
 				}
 				connectedCallback() {
 					if (this.shadowRoot) {
-						callbacks_on.mount({
-							shadow_root: this.shadowRoot,
-							element: this,
-						});
-					}
-				}
-				disconnectedCallback() {
-					if (this.shadowRoot) {
-						callbacks_on.unmount({
+						this.on_un_mounted = on_mount({
 							shadow_root: this.shadowRoot,
 							element: this,
 						});
 					}
 				}
 				/**
-				 * Description
+				 * @private
+				 * @type {()=>void}
+				 */
+				on_un_mounted;
+				disconnectedCallback() {
+					if (this.shadowRoot) {
+						this.on_un_mounted();
+					}
+				}
+				/**
 				 * @param {string} prop_name
 				 * @param {string} old_value
 				 * @param {any} new_value
 				 */
 				attributeChangedCallback(prop_name, old_value, new_value) {
 					if (this.shadowRoot) {
-						callbacks_on.effect({
+						effect({
 							shadow_root: this.shadowRoot,
 							element: this,
 							prop_name,
@@ -103,10 +103,27 @@ export class _WC {
 					for (const prop in props) {
 						props__.push(prop);
 					}
-					console.log(props__);
 					return props__;
 				}
 			}
 		);
 	}
+	// /**
+	//  * @param {props_} props
+	//  * @param {string[]} slots
+	//  * @returns {string}
+	//  */
+	// make = (props, slots = []) => {
+	// 	let props__ = [];
+	// 	for (const prop in props) {
+	// 		props;
+	// 	}
+	// 	return `
+	//     <${this.tag} >
+	//     ${slots.map((slot) => {
+	// 		return slot;
+	// 	})}
+	//     </${this.tag}>
+	//     `;
+	// };
 }
