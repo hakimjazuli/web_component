@@ -77,17 +77,3 @@ export class _WC {
 		);
 	}
 }
-new _WC(
-	'a',
-	'',
-	{},
-	(e) => {
-		return () => {};
-	},
-	(e) => {
-		return () => {};
-	},
-	(e) => {
-		return (name, old_, new_) => {};
-	}
-);
