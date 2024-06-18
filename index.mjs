@@ -31,46 +31,79 @@ export class _WC {
 	 */
 	tag;
 	/**
+	 * @typedef {{shadow_root:ShadowRoot,element:HTMLElement}} callback_on_options
+	 */
+	/**
 	 * @public
 	 * @param {string} tag
 	 * @param {string} html_template
 	 * @param {props_} props
-	 * @param {(element:ShadowRoot)=>(()=>void)} connected_callback
-	 * @param {(element:ShadowRoot)=>(()=>void)} disconnected_callback
-	 * @param {(element:ShadowRoot)=>((prop_name:string,old_value:any,new_value:any)=>void)} attribute_changed_callback,
+	 * @param {{
+	 * mount:(options:callback_on_options)=>void,
+	 * unmount:(options:callback_on_options)=>void,
+	 * effect:(options:callback_on_options & {
+	 * prop_name:string,old_value:any,new_value:any
+	 * })=>void
+	 * }} callbacks_on
 	 */
-	constructor(
-		tag,
-		html_template,
-		props,
-		connected_callback,
-		disconnected_callback,
-		attribute_changed_callback
-	) {
+	constructor(tag, html_template, props, callbacks_on) {
 		this.tag = `h-${tag}`;
 		this.props = props;
 		window.customElements.define(
 			this.tag,
 			class extends HTMLElement {
-				/**
-				 * @type {ShadowRoot}
-				 */
-				shadowRoot;
 				constructor() {
 					super();
+					this.element = this;
 					this.attachShadow({ mode: 'open' });
 					const template = document.createElement('template');
 					template.innerHTML = html_template;
-					this.shadowRoot.appendChild(template.content.cloneNode(true));
-					this.connectedCallback = connected_callback(this.shadowRoot);
-					this.disconnectedCallback = disconnected_callback(this.shadowRoot);
-					this.attributeChangedCallback = attribute_changed_callback(this.shadowRoot);
+					if (this.shadowRoot) {
+						this.shadowRoot.appendChild(template.content.cloneNode(true));
+					}
+					for (const prop in props) {
+						this.attributeChangedCallback(prop, '', props[prop]);
+					}
 				}
-				static get observedAttribute() {
+				connectedCallback() {
+					if (this.shadowRoot) {
+						callbacks_on.mount({
+							shadow_root: this.shadowRoot,
+							element: this,
+						});
+					}
+				}
+				disconnectedCallback() {
+					if (this.shadowRoot) {
+						callbacks_on.unmount({
+							shadow_root: this.shadowRoot,
+							element: this,
+						});
+					}
+				}
+				/**
+				 * Description
+				 * @param {string} prop_name
+				 * @param {string} old_value
+				 * @param {any} new_value
+				 */
+				attributeChangedCallback(prop_name, old_value, new_value) {
+					if (this.shadowRoot) {
+						callbacks_on.effect({
+							shadow_root: this.shadowRoot,
+							element: this,
+							prop_name,
+							old_value,
+							new_value,
+						});
+					}
+				}
+				static get observedAttributes() {
 					const props__ = [];
 					for (const prop in props) {
 						props__.push(prop);
 					}
+					console.log(props__);
 					return props__;
 				}
 			}
