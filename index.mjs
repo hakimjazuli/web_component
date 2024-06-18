@@ -1,5 +1,4 @@
 // @ts-check
-
 /**
  * @param {TemplateStringsArray} strings
  * @param {string[]} values
@@ -14,6 +13,25 @@ export const html = (strings, ...values) => {
 		}
 	}
 	return result;
+};
+
+/**
+ * Description
+ * @param {[HTMLElement,string,listener:()=>((Promise<void>)|void)][]} functions
+ * @returns {()=>void}
+ */
+const make_unsubs = (functions) => {
+	let unsubs_ = [];
+	for (let i = 0; i < functions.length; i++) {
+		const [element, type, listener] = functions[i];
+		element.addEventListener(type, listener);
+		unsubs_.push(() => element.removeEventListener(type, listener));
+	}
+	return () => {
+		for (let i = 0; i < unsubs_.length; i++) {
+			unsubs_[i]();
+		}
+	};
 };
 
 /**
@@ -33,7 +51,7 @@ export class _WC {
 	 * @public
 	 * @param {{
 	 * tag:string,
-	 * html_template:string,
+	 * html:string,
 	 * props?:props_,
 	 * on_mount?:(options:callback_on_options)=>(()=>void),
 	 * effect?:(options:callback_on_options & {
@@ -41,13 +59,7 @@ export class _WC {
 	 * })=>void
 	 * }} options
 	 */
-	constructor({
-		tag,
-		html_template,
-		props = undefined,
-		on_mount = undefined,
-		effect = undefined,
-	}) {
+	constructor({ tag, html, props = undefined, on_mount = undefined, effect = undefined }) {
 		this.tag = `h-${tag}`;
 		window.customElements.define(
 			this.tag,
@@ -57,7 +69,7 @@ export class _WC {
 					this.element = this;
 					this.attachShadow({ mode: 'open' });
 					const template = document.createElement('template');
-					template.innerHTML = html_template;
+					template.innerHTML = html;
 					if (this.shadowRoot) {
 						this.shadowRoot.appendChild(template.content.cloneNode(true));
 					}
