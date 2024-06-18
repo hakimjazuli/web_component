@@ -20,7 +20,7 @@ export const html = (strings, ...values) => {
  * @param {[HTMLElement,string,listener:()=>((Promise<void>)|void)][]} functions
  * @returns {()=>void}
  */
-const make_unsubs = (functions) => {
+export const make_unsubs = (functions) => {
 	let unsubs_ = [];
 	for (let i = 0; i < functions.length; i++) {
 		const [element, type, listener] = functions[i];
