@@ -1,4 +1,5 @@
 // @ts-check
+
 /**
  * @param {TemplateStringsArray} strings
  * @param {string[]} values
@@ -15,6 +16,21 @@ export const html = (strings, ...values) => {
 	return result;
 };
 
+/**
+ * @callback replace_type
+ * @param {{
+ * id:string,
+ * element:HTMLElement
+ * }} options
+ * @returns {void}
+ */
+/**
+ * @typedef {{
+ * shadow_root:ShadowRoot,
+ * element:HTMLElement,
+ * replace:replace_type,
+ * }} callback_on_options
+ */
 /**
  * Description
  * @param {[HTMLElement,string,listener:()=>((Promise<void>)|void)][]} functions
@@ -35,12 +51,9 @@ export const make_unsubs = (functions) => {
 };
 
 /**
- * @typedef {{shadow_root:ShadowRoot,element:HTMLElement}} callback_on_options
+ * @template P
  */
 
-/**
- * @template props_
- */
 export class _WC {
 	/**
 	 * @public
@@ -52,10 +65,10 @@ export class _WC {
 	 * @param {{
 	 * tag:string,
 	 * html:string,
-	 * props?:props_,
+	 * props?:P,
 	 * on_mount?:(options:callback_on_options)=>(()=>void),
 	 * effect?:(options:callback_on_options & {
-	 * prop_name:string,old_value:any,new_value:any
+	 * prop_name:Extract<keyof NonNullable<P>, string>,old_value:any,new_value:any
 	 * })=>void
 	 * }} options
 	 */
@@ -64,6 +77,18 @@ export class _WC {
 		window.customElements.define(
 			this.tag,
 			class extends HTMLElement {
+				/**
+				 * @type {replace_type}
+				 */
+				replace = ({ id, element }) => {
+					if (!this.shadowRoot) {
+						return;
+					}
+					const id_ = this.shadowRoot.getElementById(id);
+					if (id_) {
+						id_.replaceWith(element);
+					}
+				};
 				constructor() {
 					super();
 					this.element = this;
@@ -73,8 +98,10 @@ export class _WC {
 					if (this.shadowRoot) {
 						this.shadowRoot.appendChild(template.content.cloneNode(true));
 					}
-					for (const prop in props) {
-						this.attributeChangedCallback(prop, '', props[prop]);
+					if (props) {
+						for (const prop in props) {
+							this.attributeChangedCallback(prop, '', props[prop]);
+						}
 					}
 				}
 				connectedCallback() {
@@ -82,6 +109,7 @@ export class _WC {
 						this.on_un_mounted = on_mount({
 							shadow_root: this.shadowRoot,
 							element: this,
+							replace: this.replace,
 						});
 					}
 				}
@@ -96,7 +124,7 @@ export class _WC {
 					}
 				}
 				/**
-				 * @param {string} prop_name
+				 * @param {Extract<keyof NonNullable<P>, string>} prop_name
 				 * @param {string} old_value
 				 * @param {any} new_value
 				 */
@@ -105,6 +133,7 @@ export class _WC {
 						effect({
 							shadow_root: this.shadowRoot,
 							element: this,
+							replace: this.replace,
 							prop_name,
 							old_value,
 							new_value,
@@ -123,16 +152,29 @@ export class _WC {
 	}
 	/**
 	 * @param {{
-	 * props?:props_,
+	 * props?:Partial<P>,
 	 * slots?:string[]
 	 * }} options
-	 * @returns {string}
+	 * @returns {{
+	 * element:HTMLElement,
+	 * set_props:(props:Partial<P>)=>void
+	 * }}
 	 */
 	make = ({ props, slots = [] }) => {
-		let props__ = [];
+		const element = document.createElement(this.tag);
+		element.innerHTML = slots.join('');
 		for (const prop in props) {
-			props__.push(`${prop}="${props[prop]}"`);
+			// @ts-ignore
+			element.setAttribute(prop, props[prop]);
 		}
-		return `<${this.tag} ${props__.join(' ')}>${slots.join('')}</${this.tag}>`;
+		return {
+			element,
+			set_props: (props) => {
+				for (const prop in props) {
+					// @ts-ignore
+					element.setAttribute(prop, props[prop]);
+				}
+			},
+		};
 	};
 }
