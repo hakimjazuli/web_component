@@ -32,14 +32,13 @@ export const html = (strings, ...values) => {
  * }} callback_on_options
  */
 /**
- * Description
- * @param {[HTMLElement,string,listener:()=>((Promise<void>)|void)][]} functions
- * @returns {()=>void}
+ * @param {{element:HTMLElement,type:string,listener:()=>((Promise<void>)|void)}[]} functions
+ * @returns {()=>void} unsubscribe callback
  */
-export const make_unsubs = (functions) => {
+export const subscribe = (functions) => {
 	let unsubs_ = [];
 	for (let i = 0; i < functions.length; i++) {
-		const [element, type, listener] = functions[i];
+		const { element, type, listener } = functions[i];
 		element.addEventListener(type, listener);
 		unsubs_.push(() => element.removeEventListener(type, listener));
 	}
@@ -54,12 +53,12 @@ export const make_unsubs = (functions) => {
  * @template P
  */
 
-export class _WC {
+export class RegisterTag {
 	/**
 	 * @public
 	 * @type {string}
 	 */
-	tag;
+	tag = 'h';
 	/**
 	 * @public
 	 * @param {{
@@ -68,12 +67,12 @@ export class _WC {
 	 * props?:P,
 	 * on_mount?:(options:callback_on_options)=>(()=>void),
 	 * effect?:(options:callback_on_options & {
-	 * prop_name:Extract<keyof NonNullable<P>, string>,old_value:any,new_value:any
+	 * prop_name:Extract<keyof NonNullable<P>, string>,old_value:string,new_value:string
 	 * })=>void
 	 * }} options
 	 */
 	constructor({ tag, html, props = undefined, on_mount = undefined, effect = undefined }) {
-		this.tag = `h-${tag}`;
+		this.tag = `${this.tag}-${tag}`;
 		window.customElements.define(
 			this.tag,
 			class extends HTMLElement {
@@ -150,6 +149,7 @@ export class _WC {
 			}
 		);
 	}
+	register_tag = () => {};
 	/**
 	 * @param {{
 	 * props?:Partial<P>,
@@ -157,10 +157,11 @@ export class _WC {
 	 * }} options
 	 * @returns {{
 	 * element:HTMLElement,
-	 * set_props:(props:Partial<P>)=>void
+	 * set_props:(props:Partial<P>)=>void,
+	 * get_prop:(prop:Extract<keyof NonNullable<P>, string>)=>string,
 	 * }}
 	 */
-	make = ({ props, slots = [] }) => {
+	make_element = ({ props, slots = [] }) => {
 		const element = document.createElement(this.tag);
 		element.innerHTML = slots.join('');
 		for (const prop in props) {
@@ -174,6 +175,9 @@ export class _WC {
 					// @ts-ignore
 					element.setAttribute(prop, props[prop]);
 				}
+			},
+			get_prop: (prop) => {
+				return element.getAttribute(prop) ?? '';
 			},
 		};
 	};
