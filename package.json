@@ -1,6 +1,6 @@
 {
 	"name": "@html_first/web_component",
-	"version": "0.0.1",
+	"version": "0.1.0",
 	"description": "simplify native web component making with jsdoc",
 	"main": "index.mjs",
 	"scripts": {
