@@ -17,21 +17,6 @@ export const html = (strings, ...values) => {
 };
 
 /**
- * @callback replace_type
- * @param {{
- * id:string,
- * element:HTMLElement
- * }} options
- * @returns {void}
- */
-/**
- * @typedef {{
- * shadow_root:ShadowRoot,
- * element:HTMLElement,
- * replace:replace_type,
- * }} callback_on_options
- */
-/**
  * @param {{element:HTMLElement,type:string,listener:()=>((Promise<void>)|void)}[]} functions
  * @returns {()=>void} unsubscribe callback
  */
@@ -50,15 +35,31 @@ export const subscribe = (functions) => {
 };
 
 /**
- * @template P
+ * @callback replace_type
+ * @param {{
+ * id:string,
+ * element:HTMLElement
+ * }} options
+ * @returns {void}
+ */
+/**
+ * @typedef {{
+ * shadow_root:ShadowRoot,
+ * element:HTMLElement,
+ * replace:replace_type,
+ * }} callback_on_options
  */
 
+/**
+ * @template P
+ */
 export class RegisterTag {
 	/**
 	 * @public
 	 * @type {string}
 	 */
 	tag = 'h';
+
 	/**
 	 * @public
 	 * @param {{
@@ -66,12 +67,18 @@ export class RegisterTag {
 	 * html:string,
 	 * props?:P,
 	 * on_mount?:(options:callback_on_options)=>(()=>void),
-	 * effect?:(options:callback_on_options & {
+	 * effects?:(options:callback_on_options & {
 	 * prop_name:Extract<keyof NonNullable<P>, string>,old_value:string,new_value:string
 	 * })=>void
 	 * }} options
 	 */
-	constructor({ tag, html, props = undefined, on_mount = undefined, effect = undefined }) {
+	constructor({
+		tag,
+		html,
+		props = undefined,
+		on_mount = undefined,
+		effects: effect = undefined,
+	}) {
 		this.tag = `${this.tag}-${tag}`;
 		window.customElements.define(
 			this.tag,
