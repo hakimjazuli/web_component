@@ -53,7 +53,7 @@ export const subscribe = (functions) => {
  */
 
 /**
- * @template P
+ * @template {Object.<string, string>} P
  */
 export class CustomTag {
 	/**
@@ -104,7 +104,6 @@ export class CustomTag {
 					}
 					if (defaultProps) {
 						for (const prop in defaultProps) {
-							// @ts-ignore
 							this.attributeChangedCallback(prop, '', defaultProps[prop]);
 						}
 					}
