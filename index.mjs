@@ -35,12 +35,10 @@ export const subscribe = (functions) => {
 };
 
 /**
- * @callback replace_type
- * @param {{
+ * @typedef {(options:{
  * id:string,
  * element:HTMLElement
- * }} options
- * @returns {void}
+ * })=>void} replace_type
  */
 /**
  * @typedef {{
@@ -51,14 +49,13 @@ export const subscribe = (functions) => {
  */
 
 /**
- * @callback disconnectedCallback
- * @return {void}
+ * @typedef {()=>void} disconnectedCallback
  */
 
 /**
  * @template P
  */
-export class RegisterTag {
+export class CustomTag {
 	/**
 	 * @public
 	 * @param {{
@@ -206,56 +203,3 @@ export class RegisterTag {
 		};
 	};
 }
-
-// const h = new RegisterTag({
-// 	tag: 'a',
-// 	defaultProps: { bb: 'bb val', deka: 'deka val' },
-// 	attributeChangedCallback: (e) => {
-// 		switch (e.propName) {
-// 			case 'bb':
-// 				const button = e.shadowRoot.querySelector('button');
-// 				if (button) {
-// 					button.innerText = e.newValue;
-// 				}
-// 				break;
-// 			case 'deka':
-// 				const p = e.shadowRoot.querySelector('p');
-// 				if (p) {
-// 					p.innerText = e.newValue;
-// 				}
-// 				break;
-// 		}
-// 	},
-// 	html: html`
-// 		<style>
-// 			div {
-// 				background-color: red;
-// 			}
-// 		</style>
-// 		<div>
-// 			<button></button>
-// 			<p></p>
-// 		</div>
-// 	`,
-// });
-// const hh = h.makeElement({ props: { bb: 'new value from makeElement', deka: 'hh p' } });
-// const app = new RegisterTag({
-// 	html: html` <div id="hh"></div> `,
-// 	tag: 'app',
-// 	connectedCallback: (e) => {
-// 		e.replace({ id: 'hh', element: hh.element });
-// 		const unsubs = subscribe([
-// 			{
-// 				element: hh.element,
-// 				type: 'click',
-// 				listener: () => {
-// 					alert('ok jeh');
-// 				},
-// 			},
-// 		]);
-// 		hh.setProp('bb', 'new value from setProp');
-// 		return () => {
-// 			unsubs();
-// 		};
-// 	},
-// });
