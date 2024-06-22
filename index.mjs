@@ -104,6 +104,7 @@ export class CustomTag {
 					}
 					if (defaultProps) {
 						for (const prop in defaultProps) {
+							// @ts-ignore
 							this.attributeChangedCallback(prop, '', defaultProps[prop]);
 						}
 					}
@@ -130,7 +131,7 @@ export class CustomTag {
 				/**
 				 * @param {Extract<keyof NonNullable<P>, string>} prop_name
 				 * @param {string} oldValue
-				 * @param {any} newValue
+				 * @param {string} newValue
 				 */
 				attributeChangedCallback(prop_name, oldValue, newValue) {
 					if (this.shadowRoot && attributeChangedCallback) {
