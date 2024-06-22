@@ -168,9 +168,10 @@ export class CustomTag {
 	makeElement = ({ props, slots = [] }) => {
 		const element = document.createElement(this.tag);
 		element.innerHTML = slots.join('');
-		for (const prop in props) {
-			// @ts-ignore
-			element.setAttribute(prop, props[prop]);
+		if (props) {
+			for (const prop in props) {
+				element.setAttribute(prop, props[prop] ?? '');
+			}
 		}
 		/**
 		 * @type {Object.<string, (()=>void|Promise<void>)[]>}
