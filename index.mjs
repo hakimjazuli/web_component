@@ -20,7 +20,7 @@ export const html = (strings, ...values) => {
  * @param {{element:HTMLElement,type:string,listener:()=>((Promise<void>)|void)}[]} functions
  * @returns {()=>void} unsubscribe callback
  */
-export const subscribe = (functions) => {
+export const event_listener = (functions) => {
 	let unsubs_ = [];
 	for (let i = 0; i < functions.length; i++) {
 		const { element, type, listener } = functions[i];
