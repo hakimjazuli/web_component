@@ -44,10 +44,15 @@ export const subscribe = (functions) => {
  */
 /**
  * @typedef {{
- * shadow_root:ShadowRoot,
+ * shadowRoot:ShadowRoot,
  * element:HTMLElement,
  * replace:replace_type,
  * }} callback_on_options
+ */
+
+/**
+ * @callback disconnectedCallback
+ * @return {void}
  */
 
 /**
@@ -56,30 +61,26 @@ export const subscribe = (functions) => {
 export class RegisterTag {
 	/**
 	 * @public
-	 * @type {string}
-	 */
-	tag = 'h';
-
-	/**
-	 * @public
 	 * @param {{
 	 * tag:string,
 	 * html:string,
-	 * props?:P,
-	 * on_mount?:(options:callback_on_options)=>(()=>void),
-	 * effects?:(options:callback_on_options & {
-	 * prop_name:Extract<keyof NonNullable<P>, string>,old_value:string,new_value:string
-	 * })=>void
+	 * defaultProps?:P,
+	 * connectedCallback?:(options:callback_on_options)=>(disconnectedCallback),
+	 * attributeChangedCallback?:(options:callback_on_options & {
+	 * propName:Extract<keyof NonNullable<P>, string>,oldValue:string,newValue:string
+	 * })=>void,
+	 * tagPrefix?:string,
 	 * }} options
 	 */
 	constructor({
 		tag,
 		html,
-		props = undefined,
-		on_mount = undefined,
-		effects: effect = undefined,
+		defaultProps: defaultProps = undefined,
+		connectedCallback = undefined,
+		attributeChangedCallback = undefined,
+		tagPrefix = 'h',
 	}) {
-		this.tag = `${this.tag}-${tag}`;
+		this.tag = `${tagPrefix}-${tag}`;
 		window.customElements.define(
 			this.tag,
 			class extends HTMLElement {
@@ -104,16 +105,16 @@ export class RegisterTag {
 					if (this.shadowRoot) {
 						this.shadowRoot.appendChild(template.content.cloneNode(true));
 					}
-					if (props) {
-						for (const prop in props) {
-							this.attributeChangedCallback(prop, '', props[prop]);
+					if (defaultProps) {
+						for (const prop in defaultProps) {
+							this.attributeChangedCallback(prop, '', defaultProps[prop]);
 						}
 					}
 				}
 				connectedCallback() {
-					if (this.shadowRoot && on_mount) {
-						this.on_un_mounted = on_mount({
-							shadow_root: this.shadowRoot,
+					if (this.shadowRoot && connectedCallback) {
+						this.onUnMounted = connectedCallback({
+							shadowRoot: this.shadowRoot,
 							element: this,
 							replace: this.replace,
 						});
@@ -123,32 +124,32 @@ export class RegisterTag {
 				 * @private
 				 * @type {()=>void}
 				 */
-				on_un_mounted;
+				onUnMounted;
 				disconnectedCallback() {
-					if (this.shadowRoot && on_mount) {
-						this.on_un_mounted();
+					if (this.shadowRoot && connectedCallback) {
+						this.onUnMounted();
 					}
 				}
 				/**
 				 * @param {Extract<keyof NonNullable<P>, string>} prop_name
-				 * @param {string} old_value
-				 * @param {any} new_value
+				 * @param {string} oldValue
+				 * @param {any} newValue
 				 */
-				attributeChangedCallback(prop_name, old_value, new_value) {
-					if (this.shadowRoot && effect) {
-						effect({
-							shadow_root: this.shadowRoot,
+				attributeChangedCallback(prop_name, oldValue, newValue) {
+					if (this.shadowRoot && attributeChangedCallback) {
+						attributeChangedCallback({
+							shadowRoot: this.shadowRoot,
 							element: this,
 							replace: this.replace,
-							prop_name,
-							old_value,
-							new_value,
+							propName: prop_name,
+							oldValue,
+							newValue,
 						});
 					}
 				}
 				static get observedAttributes() {
 					const props__ = [];
-					for (const prop in props) {
+					for (const prop in defaultProps) {
 						props__.push(prop);
 					}
 					return props__;
@@ -156,7 +157,6 @@ export class RegisterTag {
 			}
 		);
 	}
-	register_tag = () => {};
 	/**
 	 * @param {{
 	 * props?:Partial<P>,
@@ -164,28 +164,98 @@ export class RegisterTag {
 	 * }} options
 	 * @returns {{
 	 * element:HTMLElement,
-	 * set_props:(props:Partial<P>)=>void,
-	 * get_prop:(prop:Extract<keyof NonNullable<P>, string>)=>string,
+	 * setProp:(prop:Extract<keyof NonNullable<P>, string>, new_value:string)=>Promise<void>,
+	 * getProp:(prop:Extract<keyof NonNullable<P>, string>,registerCallback?:()=>Promise<void>)=>string,
 	 * }}
 	 */
-	make_element = ({ props, slots = [] }) => {
+	makeElement = ({ props, slots = [] }) => {
 		const element = document.createElement(this.tag);
 		element.innerHTML = slots.join('');
 		for (const prop in props) {
 			// @ts-ignore
 			element.setAttribute(prop, props[prop]);
 		}
+		/**
+		 * @type {Object.<string, (()=>void|Promise<void>)[]>}
+		 */
+		const listeners = {};
 		return {
 			element,
-			set_props: (props) => {
-				for (const prop in props) {
-					// @ts-ignore
-					element.setAttribute(prop, props[prop]);
+			setProp: async (prop, new_value) => {
+				element.setAttribute(prop, new_value);
+				if (!listeners[prop]) {
+					return;
 				}
+				Promise.all(listeners[prop].map((listener) => listener()));
 			},
-			get_prop: (prop) => {
+			getProp: (prop, registerCallback = undefined) => {
+				if (registerCallback) {
+					if (!listeners[prop]) {
+						listeners[prop] = [];
+					}
+					if (
+						!listeners[prop].some(
+							(existingListener) => existingListener === registerCallback
+						)
+					) {
+						listeners[prop].push(registerCallback);
+					}
+				}
 				return element.getAttribute(prop) ?? '';
 			},
 		};
 	};
 }
+
+// const h = new RegisterTag({
+// 	tag: 'a',
+// 	defaultProps: { bb: 'bb val', deka: 'deka val' },
+// 	attributeChangedCallback: (e) => {
+// 		switch (e.propName) {
+// 			case 'bb':
+// 				const button = e.shadowRoot.querySelector('button');
+// 				if (button) {
+// 					button.innerText = e.newValue;
+// 				}
+// 				break;
+// 			case 'deka':
+// 				const p = e.shadowRoot.querySelector('p');
+// 				if (p) {
+// 					p.innerText = e.newValue;
+// 				}
+// 				break;
+// 		}
+// 	},
+// 	html: html`
+// 		<style>
+// 			div {
+// 				background-color: red;
+// 			}
+// 		</style>
+// 		<div>
+// 			<button></button>
+// 			<p></p>
+// 		</div>
+// 	`,
+// });
+// const hh = h.makeElement({ props: { bb: 'new value from makeElement', deka: 'hh p' } });
+// const app = new RegisterTag({
+// 	html: html` <div id="hh"></div> `,
+// 	tag: 'app',
+// 	connectedCallback: (e) => {
+// 		e.replace({ id: 'hh', element: hh.element });
+// 		const unsubs = subscribe([
+// 			{
+// 				element: hh.element,
+// 				type: 'click',
+// 				listener: () => {
+// 					alert('ok jeh');
+// 				},
+// 			},
+// 		]);
+// 		hh.setProp('bb', 'new value from setProp');
+// 		return () => {
+// 			unsubs();
+// 		};
+// 	},
+// });
