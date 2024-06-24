@@ -1,22 +1,6 @@
 // @ts-check
 
 /**
- * @param {TemplateStringsArray} strings
- * @param {string[]} values
- * @returns {string}
- */
-export const html = (strings, ...values) => {
-	let result = '';
-	for (let i = 0; i < strings.length; i++) {
-		result += strings[i];
-		if (i < values.length) {
-			result += values[i];
-		}
-	}
-	return result;
-};
-
-/**
  * @param {{element:HTMLElement,type:string,listener:()=>((Promise<void>)|void)}[]} functions
  * @returns {()=>void} unsubscribes callback
  */
@@ -36,15 +20,14 @@ export const makeListeners = (functions) => {
 
 /**
  * @typedef {(options:{
- * id:string,
+ * slotName:string,
  * element:HTMLElement
- * })=>void} replace_type
+ * }[])=>void} replace_type
  */
 /**
  * @typedef {{
  * shadowRoot:ShadowRoot,
- * element:HTMLElement,
- * replace:replace_type,
+ * element:HTMLElement
  * }} callback_on_options
  */
 
@@ -53,58 +36,68 @@ export const makeListeners = (functions) => {
  */
 
 /**
- * @template {Object.<string, string>} P
+ * @template {Object.<string, string>} PROP
+ * @template {Object.<string, ''>}SLOTS
  */
 export class CustomTag {
 	/**
+	 * @private
+	 * @type {string}
+	 */
+	tag;
+	/**
+	 * @private
+	 * @type {SLOTS}
+	 */
+	slots;
+	/**
 	 * @public
 	 * @param {{
-	 * tag:string,
-	 * html:string,
-	 * defaultProps?:P,
+	 * tagName:string,
+	 * htmlTemplate:(options:{slotTag:(slotName:Extract<keyof NonNullable<SLOTS>, string>)=>string})=>string,
+	 * slotNames?:SLOTS,
+	 * propsDefault?:PROP,
 	 * connectedCallback?:(options:callback_on_options)=>(disconnectedCallback),
 	 * attributeChangedCallback?:(options:callback_on_options & {
-	 * propName:Extract<keyof NonNullable<P>, string>,oldValue:string,newValue:string
+	 * propName:Extract<keyof NonNullable<PROP>, string>,oldValue:string,newValue:string
 	 * })=>void,
 	 * tagPrefix?:string,
 	 * }} options
 	 */
 	constructor({
-		tag,
-		html,
-		defaultProps: defaultProps = undefined,
+		tagName,
+		htmlTemplate,
+		slotNames = undefined,
+		propsDefault = undefined,
 		connectedCallback = undefined,
 		attributeChangedCallback = undefined,
 		tagPrefix = 'h',
 	}) {
-		this.tag = `${tagPrefix}-${tag}`;
+		this.tag = `${tagPrefix}-${tagName}`;
+		if (slotNames) {
+			this.slots = slotNames;
+		}
 		window.customElements.define(
 			this.tag,
 			class extends HTMLElement {
-				/**
-				 * @type {replace_type}
-				 */
-				replace = ({ id, element }) => {
-					if (!this.shadowRoot) {
-						return;
-					}
-					const id_ = this.shadowRoot.getElementById(id);
-					if (id_) {
-						id_.replaceWith(element);
-					}
-				};
 				constructor() {
 					super();
 					this.element = this;
-					this.attachShadow({ mode: 'open' });
+					this.attachShadow({
+						mode: 'open',
+					});
 					const template = document.createElement('template');
-					template.innerHTML = html;
+					template.innerHTML = htmlTemplate({
+						slotTag: (slot) => {
+							return `<slot name="${slot}"></slot>`;
+						},
+					});
 					if (this.shadowRoot) {
 						this.shadowRoot.appendChild(template.content.cloneNode(true));
 					}
-					if (defaultProps) {
-						for (const prop in defaultProps) {
-							this.attributeChangedCallback(prop, '', defaultProps[prop]);
+					if (propsDefault) {
+						for (const prop in propsDefault) {
+							this.attributeChangedCallback(prop, '', propsDefault[prop]);
 						}
 					}
 				}
@@ -113,7 +106,6 @@ export class CustomTag {
 						this.onUnMounted = connectedCallback({
 							shadowRoot: this.shadowRoot,
 							element: this,
-							replace: this.replace,
 						});
 					}
 				}
@@ -128,17 +120,16 @@ export class CustomTag {
 					}
 				}
 				/**
-				 * @param {Extract<keyof NonNullable<P>, string>} prop_name
+				 * @param {Extract<keyof NonNullable<PROP>, string>} propName
 				 * @param {string} oldValue
 				 * @param {string} newValue
 				 */
-				attributeChangedCallback(prop_name, oldValue, newValue) {
+				attributeChangedCallback(propName, oldValue, newValue) {
 					if (this.shadowRoot && attributeChangedCallback) {
 						attributeChangedCallback({
 							shadowRoot: this.shadowRoot,
 							element: this,
-							replace: this.replace,
-							propName: prop_name,
+							propName,
 							oldValue,
 							newValue,
 						});
@@ -146,7 +137,7 @@ export class CustomTag {
 				}
 				static get observedAttributes() {
 					const props__ = [];
-					for (const prop in defaultProps) {
+					for (const prop in propsDefault) {
 						props__.push(prop);
 					}
 					return props__;
@@ -156,51 +147,162 @@ export class CustomTag {
 	}
 	/**
 	 * @param {{
-	 * props?:Partial<P>,
-	 * slots?:string[]
-	 * }} options
+	 * props?:Partial<PROP>,
+	 * slots?:Record<Extract<keyof NonNullable<SLOTS>, string>, HTMLElement>
+	 * }} [options]
 	 * @returns {{
 	 * element:HTMLElement,
-	 * setProp:(prop:Extract<keyof NonNullable<P>, string>, new_value:string)=>Promise<void>,
-	 * getProp:(prop:Extract<keyof NonNullable<P>, string>,registerCallback?:()=>Promise<void>)=>string,
+	 * setProp:(propName:Extract<keyof NonNullable<PROP>, string>, newValue:string)=>Promise<void>,
+	 * getProp:(propName:Extract<keyof NonNullable<PROP>, string>, registerListener?:()=>Promise<void>)=>string,
 	 * }}
 	 */
-	makeElement = ({ props, slots = [] }) => {
+	makeElement = ({ props = undefined, slots = undefined } = undefined) => {
 		const element = document.createElement(this.tag);
-		element.innerHTML = slots.join('');
 		if (props) {
 			for (const prop in props) {
 				element.setAttribute(prop, props[prop] ?? '');
 			}
 		}
+		if (slots) {
+			for (const slot in this.slots) {
+				const slot_element = slots[slot];
+				slot_element.setAttribute('slot', slot);
+				element.appendChild(slot_element);
+			}
+		}
 		/**
-		 * @type {Object.<string, (()=>void|Promise<void>)[]>}
+		 * @type {Object.<string, (()=>Promise<void>)[]>}
 		 */
 		const listeners = {};
 		return {
 			element,
-			setProp: async (prop, new_value) => {
-				element.setAttribute(prop, new_value);
-				if (!listeners[prop]) {
+			setProp: async (propName, newValue) => {
+				element.setAttribute(propName, newValue);
+				if (!listeners[propName]) {
 					return;
 				}
-				Promise.all(listeners[prop].map((listener) => listener()));
+				Promise.all(listeners[propName].map((listener) => listener()));
 			},
-			getProp: (prop, registerCallback = undefined) => {
-				if (registerCallback) {
-					if (!listeners[prop]) {
-						listeners[prop] = [];
+			getProp: (propName, registerListener = undefined) => {
+				if (registerListener) {
+					if (!listeners[propName]) {
+						listeners[propName] = [];
 					}
 					if (
-						!listeners[prop].some(
-							(existingListener) => existingListener === registerCallback
+						!listeners[propName].some(
+							(existingListener) => existingListener === registerListener
 						)
 					) {
-						listeners[prop].push(registerCallback);
+						listeners[propName].push(registerListener);
 					}
 				}
-				return element.getAttribute(prop) ?? '';
+				return element.getAttribute(propName) ?? '';
 			},
 		};
 	};
 }
+
+/**
+ * @param {{
+ * tagName:string,
+ * data:Object.<string,string>[],
+ * loopedElement:HTMLElement
+ * }} options
+ * @returns {{
+ * element:HTMLElement,
+ * setProp:(propName:'data', newValue:string)=>Promise<void>,
+ * getProp:(propName:'data', registerListener?:()=>Promise<void>)=>string,
+ * }}
+ */
+export const ForTag = ({ tagName, data, loopedElement }) => {
+	const loopedElement_ = loopedElement.cloneNode(true);
+	return new CustomTag({
+		tagName,
+		propsDefault: {
+			data: JSON.stringify(data),
+		},
+		htmlTemplate: (s) => {
+			return /* HTML */ ``;
+		},
+		attributeChangedCallback: (e) => {
+			try {
+				switch (e.propName) {
+					case 'data':
+						/**
+						 * @type {Object.<string,string>[]}
+						 */
+						const elementsProps = JSON.parse(e.newValue);
+						e.shadowRoot.innerHTML = '';
+						if (!(loopedElement_ instanceof HTMLElement)) {
+							return;
+						}
+						for (let i = 0; i < elementsProps.length; i++) {
+							const elementProp = elementsProps[i];
+							for (const key in elementProp) {
+								loopedElement_.setAttribute(key, elementProp[key]);
+							}
+							e.shadowRoot.appendChild(loopedElement_);
+						}
+						break;
+				}
+			} catch (error) {
+				console.error(error);
+			}
+		},
+		tagPrefix: 'f',
+	}).makeElement({});
+};
+/**
+ * example
+ * example
+ * example
+ * example
+ * example
+ * example
+ * example
+ * example
+ * example
+ * example
+ * example
+ * example
+ * example
+ * example
+ * example
+ * example
+ * example
+ * example
+ * example
+ * example
+ * example
+ * example
+ * example
+ * example
+ * example
+ * example
+ * example
+ * example
+ * example
+ * example
+ * example
+ * example
+ */
+new CustomTag({
+	tagName: 'test',
+	propsDefault: {
+		aka: '',
+	},
+	slotNames: {
+		a: '',
+		v: '',
+	},
+	htmlTemplate: (s) => {
+		return /* HTML */ `
+			<div></div>
+			${s.slotTag('v')}
+		`;
+	},
+}).makeElement({
+	props: {
+		aka: '',
+	},
+});
