@@ -18,6 +18,17 @@ export const makeListeners = (functions) => {
 	};
 };
 
+let subscriber = null;
+
+/**
+ * @param {()=>Promise<void>} async_fn
+ * @returns {Promise<void>}
+ */
+export const makeEffect = async (async_fn) => {
+	subscriber = async_fn;
+	await async_fn();
+	subscriber = null;
+};
 /**
  * @typedef {(options:{
  * slotName:string,
@@ -25,10 +36,9 @@ export const makeListeners = (functions) => {
  * }[])=>void} replace_type
  */
 /**
- * @typedef {{
- * shadowRoot:ShadowRoot,
- * element:HTMLElement
- * }} callback_on_options
+ * @typedef get_set_prop_type
+ * @property {()=>string} get
+ * @property {(newValue:string)=>void} set
  */
 
 /**
@@ -37,7 +47,7 @@ export const makeListeners = (functions) => {
 
 /**
  * @template {Object.<string, string>} PROP
- * @template {Object.<string, ''>}SLOTS
+ * @template {Object.<string, ''>} SLOTS
  */
 export class CustomTag {
 	/**
@@ -51,16 +61,31 @@ export class CustomTag {
 	 */
 	slots;
 	/**
+	 * @typedef {{
+	 * shadowRoot:ShadowRoot,
+	 * element:HTMLElement,
+	 * propElements:(propName:Extract<keyof NonNullable<PROP>, string>)=>{element:NodeListOf<HTMLElement|Element>|undefined,value:string}[],
+	 * }} callback_on_options
+	 */
+	/**
+	 * @typedef {callback_on_options & {
+	 * changed:{propName:Extract<keyof NonNullable<PROP>, string>,oldValue:string,newValue:string}
+	 * }} attributeChangedCallback_options
+	 */
+	/**
 	 * @public
 	 * @param {{
 	 * tagName:string,
-	 * htmlTemplate:(options:{slotTag:(slotName:Extract<keyof NonNullable<SLOTS>, string>)=>string})=>string,
+	 * htmlTemplate:(
+	 * 	options:({
+	 * 		propAttribute:(propName:Extract<keyof NonNullable<PROP>, string>,attrValue?:string)=>string,
+	 * 		slotTag:(slotName:Extract<keyof NonNullable<SLOTS>, string>)=>string
+	 * 	})
+	 * )=>string,
 	 * slotNames?:SLOTS,
 	 * propsDefault?:PROP,
 	 * connectedCallback?:(options:callback_on_options)=>(disconnectedCallback),
-	 * attributeChangedCallback?:(options:callback_on_options & {
-	 * propName:Extract<keyof NonNullable<PROP>, string>,oldValue:string,newValue:string
-	 * })=>void,
+	 * attributeChangedCallback?:(options:attributeChangedCallback_options)=>void,
 	 * tagPrefix?:string,
 	 * }} options
 	 */
@@ -71,9 +96,13 @@ export class CustomTag {
 		propsDefault = undefined,
 		connectedCallback = undefined,
 		attributeChangedCallback = undefined,
-		tagPrefix = 'h',
+		tagPrefix = 'hwc',
 	}) {
-		this.tag = `${tagPrefix}-${tagName}`;
+		this.tag = `${tagPrefix}-${tagName}`
+			.toLowerCase()
+			.replace(/[^a-z0-9]/g, '-')
+			.replace(/^-+|-+$/g, '')
+			.replace(/-+/g, '-');
 		if (slotNames) {
 			this.slots = slotNames;
 		}
@@ -88,12 +117,37 @@ export class CustomTag {
 					});
 					const template = document.createElement('template');
 					template.innerHTML = htmlTemplate({
-						slotTag: (slot) => {
-							return `<slot name="${slot}"></slot>`;
+						propAttribute: (propName, attrValue = '') => {
+							return `prop-${propName}="${attrValue}"`;
+						},
+						slotTag: (slotName) => {
+							return `<slot name="${slotName}"></slot>`;
 						},
 					});
 					if (this.shadowRoot) {
 						this.shadowRoot.appendChild(template.content.cloneNode(true));
+						this.callback_on_options = {
+							shadowRoot: this.shadowRoot,
+							element: this,
+							propElements: (propName) => {
+								let elements;
+								if (this.shadowRoot) {
+									elements = this.shadowRoot.querySelectorAll(
+										`[prop-${propName}]`
+									);
+								}
+								let elem = [];
+								if (elements) {
+									elements.forEach((element) => {
+										elem.push({
+											element,
+											value: element.getAttribute(`prop-${propName}`) ?? '',
+										});
+									});
+								}
+								return elem;
+							},
+						};
 					}
 					if (propsDefault) {
 						for (const prop in propsDefault) {
@@ -101,12 +155,13 @@ export class CustomTag {
 						}
 					}
 				}
+				/**
+				 * @type {callback_on_options}
+				 */
+				callback_on_options;
 				connectedCallback() {
 					if (this.shadowRoot && connectedCallback) {
-						this.onUnMounted = connectedCallback({
-							shadowRoot: this.shadowRoot,
-							element: this,
-						});
+						this.onUnMounted = connectedCallback(this.callback_on_options);
 					}
 				}
 				/**
@@ -125,14 +180,20 @@ export class CustomTag {
 				 * @param {string} newValue
 				 */
 				attributeChangedCallback(propName, oldValue, newValue) {
+					/**
+					 * @type {attributeChangedCallback_options}
+					 */
+					const obj = {};
+					for (const key in this.callback_on_options) {
+						obj[key] = this.callback_on_options[key];
+					}
+					obj.changed = {
+						propName,
+						oldValue,
+						newValue,
+					};
 					if (this.shadowRoot && attributeChangedCallback) {
-						attributeChangedCallback({
-							shadowRoot: this.shadowRoot,
-							element: this,
-							propName,
-							oldValue,
-							newValue,
-						});
+						attributeChangedCallback(obj);
 					}
 				}
 				static get observedAttributes() {
@@ -152,15 +213,46 @@ export class CustomTag {
 	 * }} [options]
 	 * @returns {{
 	 * element:HTMLElement,
-	 * setProp:(propName:Extract<keyof NonNullable<PROP>, string>, newValue:string)=>Promise<void>,
-	 * getProp:(propName:Extract<keyof NonNullable<PROP>, string>, registerListener?:()=>Promise<void>)=>string,
+	 * prop:Record<Extract<keyof NonNullable<PROP>, string>, get_set_prop_type>,
 	 * }}
 	 */
 	makeElement = ({ props = undefined, slots = undefined } = undefined) => {
 		const element = document.createElement(this.tag);
+		/**
+		 * @type {Record<Extract<keyof NonNullable<PROP>, string>, get_set_prop_type>}
+		 */
+		// @ts-ignore
+		const props_ = {};
 		if (props) {
 			for (const prop in props) {
+				const subscription = [];
 				element.setAttribute(prop, props[prop] ?? '');
+				/**
+				 * @type {get_set_prop_type}
+				 */
+				props_[prop] = {
+					get: () => {
+						if (subscriber) {
+							subscription.push(subscriber);
+						}
+						return element.getAttribute(prop) ?? '';
+					},
+					set: async (newValue) => {
+						element.setAttribute(prop, newValue);
+						Promise.all(
+							subscription.map(async (callback) => {
+								try {
+									return await callback();
+								} catch (error) {
+									console.error('Error in callback:', error);
+									throw error;
+								}
+							})
+						).catch((error) => {
+							console.error('Promise.all failed:', error);
+						});
+					},
+				};
 			}
 		}
 		if (slots) {
@@ -170,34 +262,9 @@ export class CustomTag {
 				element.appendChild(slot_element);
 			}
 		}
-		/**
-		 * @type {Object.<string, (()=>Promise<void>)[]>}
-		 */
-		const listeners = {};
 		return {
 			element,
-			setProp: async (propName, newValue) => {
-				element.setAttribute(propName, newValue);
-				if (!listeners[propName]) {
-					return;
-				}
-				Promise.all(listeners[propName].map((listener) => listener()));
-			},
-			getProp: (propName, registerListener = undefined) => {
-				if (registerListener) {
-					if (!listeners[propName]) {
-						listeners[propName] = [];
-					}
-					if (
-						!listeners[propName].some(
-							(existingListener) => existingListener === registerListener
-						)
-					) {
-						listeners[propName].push(registerListener);
-					}
-				}
-				return element.getAttribute(propName) ?? '';
-			},
+			prop: props_,
 		};
 	};
 }
@@ -210,13 +277,13 @@ export class CustomTag {
  * }} options
  * @returns {{
  * element:HTMLElement,
- * setProp:(propName:'data', newValue:string)=>Promise<void>,
- * getProp:(propName:'data', registerListener?:()=>Promise<void>)=>string,
+ * prop:Record<'data', get_set_prop_type>,
  * }}
  */
-export const ForTag = ({ tagName, data, loopedElement }) => {
+export const ForElement = ({ tagName, data, loopedElement }) => {
 	const loopedElement_ = loopedElement.cloneNode(true);
 	return new CustomTag({
+		tagPrefix: 'for',
 		tagName,
 		propsDefault: {
 			data: JSON.stringify(data),
@@ -226,12 +293,12 @@ export const ForTag = ({ tagName, data, loopedElement }) => {
 		},
 		attributeChangedCallback: (e) => {
 			try {
-				switch (e.propName) {
+				switch (e.changed.propName) {
 					case 'data':
 						/**
 						 * @type {Object.<string,string>[]}
 						 */
-						const elementsProps = JSON.parse(e.newValue);
+						const elementsProps = JSON.parse(e.changed.newValue);
 						e.shadowRoot.innerHTML = '';
 						if (!(loopedElement_ instanceof HTMLElement)) {
 							return;
@@ -249,60 +316,30 @@ export const ForTag = ({ tagName, data, loopedElement }) => {
 				console.error(error);
 			}
 		},
-		tagPrefix: 'f',
 	}).makeElement({});
 };
 /**
- * example
- * example
- * example
- * example
- * example
- * example
- * example
- * example
- * example
- * example
- * example
- * example
- * example
- * example
- * example
- * example
- * example
- * example
- * example
- * example
- * example
- * example
- * example
- * example
- * example
- * example
- * example
- * example
- * example
- * example
- * example
- * example
+ * MUTAIONSSSSSSSSSSSSSSS;
+ * MUTAIONSSSSSSSSSSSSSSS;
+ * MUTAIONSSSSSSSSSSSSSSS;
+ * MUTAIONSSSSSSSSSSSSSSS;
+ * MUTAIONSSSSSSSSSSSSSSS;
+ * MUTAIONSSSSSSSSSSSSSSS;
+ * MUTAIONSSSSSSSSSSSSSSS;
+ * MUTAIONSSSSSSSSSSSSSSS;
+ * MUTAIONSSSSSSSSSSSSSSS;
+ * MUTAIONSSSSSSSSSSSSSSS;
+ * MUTAIONSSSSSSSSSSSSSSS;
+ * MUTAIONSSSSSSSSSSSSSSS;
+ * MUTAIONSSSSSSSSSSSSSSS;
+ * MUTAIONSSSSSSSSSSSSSSS;
+ * MUTAIONSSSSSSSSSSSSSSS;
+ * MUTAIONSSSSSSSSSSSSSSS;
+ * MUTAIONSSSSSSSSSSSSSSS;
+ * MUTAIONSSSSSSSSSSSSSSS;
  */
-new CustomTag({
-	tagName: 'test',
-	propsDefault: {
-		aka: '',
-	},
-	slotNames: {
-		a: '',
-		v: '',
-	},
-	htmlTemplate: (s) => {
-		return /* HTML */ `
-			<div></div>
-			${s.slotTag('v')}
-		`;
-	},
-}).makeElement({
-	props: {
-		aka: '',
-	},
-});
+/**
+ * @param {string} json_input
+ * @returns {string}
+ */
+const mutation_check = (json_input) => '';
