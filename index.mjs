@@ -90,7 +90,7 @@ export class CustomTag {
 	 */
 	/**
 	 * @typedef {callback_on_options &  {
-	 * makeEffect:(async_fn:()=>Promise<void>)=>void
+	 * effect:(async_fn:()=>Promise<void>)=>void
 	 * }} connectedCallback_options
 	 */
 	/**
@@ -195,23 +195,24 @@ export class CustomTag {
 				 * @type {callback_on_options}
 				 */
 				callback_on_options;
+				// connectedCallback_returns = {};
 				connectedCallback() {
-					// /**
-					//  * @type {attributeChangedCallback_options}
-					//  */
-					// const obj = {};
-					// for (const key in this.callback_on_options) {
-					// 	obj[key] = this.callback_on_options[key];
-					// }
-					// obj.makeEffect = async (async_fn) => {
-					// 	subscriber = async_fn;
-					// 	await async_fn();
-					// 	subscriber = null;
-					// };
-					// this_.assignPropController(this.element, propsDefault);
-					// if (this.shadowRoot && connectedCallback) {
-					// 	connectedCallback(this.callback_on_options) ?? false;
-					// }
+					/**
+					 * @type {connectedCallback_options}
+					 */
+					const obj = {};
+					for (const key in this.callback_on_options) {
+						obj[key] = this.callback_on_options[key];
+					}
+					obj.effect = async (async_fn) => {
+						subscriber = async_fn;
+						await async_fn();
+						subscriber = null;
+					};
+					this_.assignPropController(this.element, propsDefault);
+					if (this.shadowRoot && connectedCallback) {
+						connectedCallback(obj);
+					}
 				}
 				disconnectedCallback() {
 					if (this.shadowRoot && this.listener?.unsubscribersList.length) {
@@ -219,26 +220,38 @@ export class CustomTag {
 					}
 				}
 				/**
+				 * @private
+				 * @type {attributeChangedCallback_options|null}
+				 */
+				attributeChangedCallback_obj = null;
+				/**
 				 * @param {Extract<keyof NonNullable<PROP>, string>} propName
 				 * @param {string} oldValue
 				 * @param {string} newValue
 				 */
 				attributeChangedCallback(propName, oldValue, newValue) {
-					// /**
-					//  * @type {attributeChangedCallback_options}
-					//  */
-					// const obj = {};
-					// for (const key in this.callback_on_options) {
-					// 	obj[key] = this.callback_on_options[key];
-					// }
-					// obj.changed = {
-					// 	propName,
-					// 	oldValue,
-					// 	newValue,
-					// };
-					// if (this.shadowRoot && attributeChangedCallback) {
-					// 	attributeChangedCallback(obj);
-					// }
+					if (this.attributeChangedCallback_obj === null) {
+						// @ts-ignore
+						this.attributeChangedCallback_obj = {};
+						for (const key in this.callback_on_options) {
+							// @ts-ignore
+							this.attributeChangedCallback_obj[key] = this.callback_on_options[key];
+						}
+					}
+					if (this.attributeChangedCallback_obj != null) {
+						this.attributeChangedCallback_obj.changed = {
+							propName,
+							oldValue,
+							newValue,
+						};
+					}
+					if (
+						this.shadowRoot &&
+						attributeChangedCallback &&
+						this.attributeChangedCallback_obj
+					) {
+						attributeChangedCallback(this.attributeChangedCallback_obj);
+					}
 				}
 				static get observedAttributes() {
 					const props__ = [];
