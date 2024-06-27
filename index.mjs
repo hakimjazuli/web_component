@@ -12,7 +12,7 @@ const queue_handler = new _QueueFIFO();
  * element:HTMLElement,
  * }} listeners_input_type
  */
-export class Listeners {
+class Listeners {
 	/**
 	 * @param {listeners_input_type[]} [listeners]
 	 */
@@ -26,6 +26,9 @@ export class Listeners {
 			});
 		}
 	}
+	/**
+	 * @private
+	 */
 	unsubs = () => {
 		this.unsubscribersList.forEach((unsub) => {
 			unsub();
@@ -38,6 +41,7 @@ export class Listeners {
 		this.unsubscribersList.push(unsubscriber);
 	};
 	/**
+	 * @private
 	 * @type {(()=>void)[]}
 	 */
 	unsubscribersList;
@@ -79,7 +83,7 @@ export class CustomTag {
 	 * @typedef {{
 	 * shadowRoot:ShadowRoot,
 	 * element:HTMLElement,
-	 * propElements:(propName:Extract<keyof NonNullable<PROP>, string>)=>{element:HTMLElement,attributeValue:string}[],
+	 * setPropDOM:(propName:Extract<keyof NonNullable<PROP>, string>, value:any)=>void,
 	 * listeners: (listener:listeners_input_type[])=>Listeners;
 	 * }} callback_on_options
 	 */
@@ -99,7 +103,7 @@ export class CustomTag {
 	 * tagName:string,
 	 * htmlTemplate:(
 	 * 	options:({
-	 * 		propAttribute:(propName:Extract<keyof NonNullable<PROP>, string>,attrValue?:string)=>string,
+	 * 		propAttributes:(propName:Extract<keyof NonNullable<PROP>, string>,attrValues:string[])=>string,
 	 * 		slotTag:(slotName:Extract<keyof NonNullable<SLOTS>, string>)=>string
 	 * 	})
 	 * )=>string,
@@ -147,8 +151,8 @@ export class CustomTag {
 					});
 					const template = document.createElement('template');
 					template.innerHTML = htmlTemplate({
-						propAttribute: (propName, attrValue = '') => {
-							return `prop-${propName}="${attrValue}"`;
+						propAttributes: (propName, attrValues = []) => {
+							return `prop-${propName}="${attrValues.join(';')}"`;
 						},
 						slotTag: (slotName) => {
 							return `<slot name="${slotName}"></slot>`;
@@ -159,23 +163,31 @@ export class CustomTag {
 						this.callback_on_options = {
 							shadowRoot: this.shadowRoot,
 							element: this,
-							propElements: (propName) => {
-								let elements;
+							setPropDOM: (propName, value) => {
+								let elements_;
 								if (this.shadowRoot) {
-									elements = this.shadowRoot.querySelectorAll(
+									elements_ = this.shadowRoot.querySelectorAll(
 										`[prop-${propName}]`
 									);
 								}
-								let elem = [];
-								if (elements) {
-									elements.forEach((element) => {
-										elem.push({
-											element,
-											value: element.getAttribute(`prop-${propName}`) ?? '',
-										});
-									});
+								if (!elements_) {
+									return;
 								}
-								return elem;
+								elements_.forEach((element) => {
+									const targets_ = element.getAttribute(`prop-${propName}`) ?? '';
+									const targets = targets_.split(';');
+									for (let o = 0; o < targets.length; o++) {
+										const target = targets[o];
+										try {
+											if (!(target in element)) {
+												throw '';
+											}
+											element[target] = value;
+										} catch (error) {
+											element.setAttribute(target, value);
+										}
+									}
+								});
 							},
 							listeners: (listener) => {
 								if (this.listener === null) {
@@ -214,7 +226,9 @@ export class CustomTag {
 					}
 				}
 				disconnectedCallback() {
+					// @ts-ignore
 					if (this.shadowRoot && this.listener?.unsubscribersList.length) {
+						// @ts-ignore
 						this.listener.unsubs();
 					}
 				}
