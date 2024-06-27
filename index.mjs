@@ -42,7 +42,7 @@ export const makeEffect = async (async_fn) => {
  */
 
 /**
- * @typedef {()=>void} disconnectedCallback
+ * @typedef {(()=>void)|undefined} disconnectedCallback
  */
 
 /**
@@ -98,6 +98,7 @@ export class CustomTag {
 		attributeChangedCallback = undefined,
 		tagPrefix = 'hwc',
 	}) {
+		this.propsDefault = propsDefault;
 		this.tag = `${tagPrefix}-${tagName}`
 			.toLowerCase()
 			.replace(/[^a-z0-9]/g, '-')
@@ -106,6 +107,7 @@ export class CustomTag {
 		if (slotNames) {
 			this.slots = slotNames;
 		}
+		const this_ = this;
 		window.customElements.define(
 			this.tag,
 			class extends HTMLElement {
@@ -160,8 +162,16 @@ export class CustomTag {
 				 */
 				callback_on_options;
 				connectedCallback() {
+					this_.assignPropController(this.element, propsDefault);
 					if (this.shadowRoot && connectedCallback) {
-						this.onUnMounted = connectedCallback(this.callback_on_options);
+						const connectedCallback_return = connectedCallback(
+							this.callback_on_options
+						);
+						if (!connectedCallback_return) {
+							this.onUnMounted = () => {};
+							return;
+						}
+						this.onmousedown = connectedCallback_return;
 					}
 				}
 				/**
@@ -207,6 +217,58 @@ export class CustomTag {
 		);
 	}
 	/**
+	 * @private
+	 * @param {HTMLElement} element
+	 * @param {Partial<PROP>|undefined} props
+	 * @returns {void}
+	 */
+	assignPropController = (element, props = undefined) => {
+		/**
+		 * @type {Record<Extract<keyof NonNullable<PROP>, string>, get_set_prop_type>}
+		 */
+		const props_ = this.propsController;
+		if (!props) {
+			return;
+		}
+		for (const prop in props) {
+			const subscription = [];
+			element.setAttribute(prop, props[prop] ?? '');
+			/**
+			 * @type {get_set_prop_type}
+			 */
+			props_[prop] = {
+				get: () => {
+					if (subscriber) {
+						subscription.push(subscriber);
+					}
+					return element.getAttribute(prop) ?? '';
+				},
+				set: async (newValue) => {
+					element.setAttribute(prop, newValue);
+					Promise.all(
+						subscription.map(async (callback) => {
+							try {
+								return await callback();
+							} catch (error) {
+								console.error('Error in callback:', error);
+								throw error;
+							}
+						})
+					).catch((error) => {
+						console.error('Promise.all failed:', error);
+					});
+				},
+			};
+		}
+		this.propsController = props_;
+	};
+	/**
+	 * @private
+	 * @type {Record<Extract<keyof NonNullable<PROP>, string>, get_set_prop_type>}
+	 */
+	// @ts-ignore
+	propsController = {};
+	/**
 	 * @param {{
 	 * props?:Partial<PROP>,
 	 * slots?:Record<Extract<keyof NonNullable<SLOTS>, string>, HTMLElement>
@@ -216,45 +278,9 @@ export class CustomTag {
 	 * prop:Record<Extract<keyof NonNullable<PROP>, string>, get_set_prop_type>,
 	 * }}
 	 */
-	makeElement = ({ props = undefined, slots = undefined } = undefined) => {
+	makeElement = ({ props = undefined, slots = undefined } = {}) => {
 		const element = document.createElement(this.tag);
-		/**
-		 * @type {Record<Extract<keyof NonNullable<PROP>, string>, get_set_prop_type>}
-		 */
-		// @ts-ignore
-		const props_ = {};
-		if (props) {
-			for (const prop in props) {
-				const subscription = [];
-				element.setAttribute(prop, props[prop] ?? '');
-				/**
-				 * @type {get_set_prop_type}
-				 */
-				props_[prop] = {
-					get: () => {
-						if (subscriber) {
-							subscription.push(subscriber);
-						}
-						return element.getAttribute(prop) ?? '';
-					},
-					set: async (newValue) => {
-						element.setAttribute(prop, newValue);
-						Promise.all(
-							subscription.map(async (callback) => {
-								try {
-									return await callback();
-								} catch (error) {
-									console.error('Error in callback:', error);
-									throw error;
-								}
-							})
-						).catch((error) => {
-							console.error('Promise.all failed:', error);
-						});
-					},
-				};
-			}
-		}
+		this.assignPropController(element, props);
 		if (slots) {
 			for (const slot in this.slots) {
 				const slot_element = slots[slot];
@@ -264,7 +290,7 @@ export class CustomTag {
 		}
 		return {
 			element,
-			prop: props_,
+			prop: this.propsController,
 		};
 	};
 }
