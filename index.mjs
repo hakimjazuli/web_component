@@ -4,7 +4,16 @@ import { _QueueFIFO, _QueueObjectFIFO } from '@html_first/simple_queue';
 
 let subscriber = null;
 const queue_handler = new _QueueFIFO();
-
+/**
+ * @param {any} value
+ * @returns {string}
+ */
+const valid_attribute_value = (value) => {
+	if (typeof value == 'string') {
+		return value;
+	}
+	return JSON.stringify(value).replace(/^"(.*)"$/, '$1');
+};
 /**
  * @typedef {{
  * type:string,
@@ -60,7 +69,7 @@ class Listeners {
  */
 
 /**
- * @template {Object.<string, string>} PROP
+ * @template {Object.<string, any>} PROP
  * @template {Object.<string, ''>} SLOTS
  */
 export class CustomTag {
@@ -193,7 +202,11 @@ export class CustomTag {
 					}
 					if (propsDefault) {
 						for (const prop in propsDefault) {
-							this.attributeChangedCallback(prop, '', propsDefault[prop]);
+							this.attributeChangedCallback(
+								prop,
+								'',
+								valid_attribute_value(propsDefault[prop])
+							);
 						}
 					}
 				}
@@ -300,7 +313,7 @@ export class CustomTag {
 					return JSON.parse(element.getAttribute(prop) ?? '');
 				},
 				set value(newValue) {
-					element.setAttribute(prop, JSON.stringify(newValue).replace(/^"(.*)"$/, '$1'));
+					element.setAttribute(prop, valid_attribute_value(newValue));
 					queue_handler.assign(
 						new _QueueObjectFIFO(async () => {
 							await Promise.all(
