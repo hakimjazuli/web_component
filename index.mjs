@@ -1,16 +1,48 @@
 // @ts-check
 
+import { _QueueFIFO, _QueueObjectFIFO } from '@html_first/simple_queue';
+
 let subscriber = null;
+const queue_handler = new _QueueFIFO();
 
 /**
- * @param {()=>Promise<void>} async_fn
- * @returns {Promise<void>}
+ * @typedef {{
+ * type:string,
+ * listener:()=>void,
+ * element:HTMLElement,
+ * }} listeners_input_type
  */
-export const makeEffect = async (async_fn) => {
-	subscriber = async_fn;
-	await async_fn();
-	subscriber = null;
-};
+export class Listeners {
+	/**
+	 * @param {listeners_input_type[]} [listeners]
+	 */
+	constructor(listeners = []) {
+		this.unsubscribersList = [];
+		for (let i = 0; i < listeners.length; i++) {
+			const { type, element, listener } = listeners[i];
+			element.addEventListener(type, listener);
+			this.unsubscribersList.push(() => {
+				element.removeEventListener(type, listener);
+			});
+		}
+	}
+	unsubs = () => {
+		this.unsubscribersList.forEach((unsub) => {
+			unsub();
+		});
+	};
+	/**
+	 * @param {()=>void} unsubscriber
+	 */
+	addUnsubscriber = (unsubscriber) => {
+		this.unsubscribersList.push(unsubscriber);
+	};
+	/**
+	 * @type {(()=>void)[]}
+	 */
+	unsubscribersList;
+}
+
 /**
  * @typedef {(options:{
  * slotName:string,
@@ -18,13 +50,9 @@ export const makeEffect = async (async_fn) => {
  * }[])=>void} replace_type
  */
 /**
- * @typedef get_set_prop_type
- * @property {()=>any} get
- * @property {(newValue:any)=>void} set
- */
-
-/**
- * @typedef {(()=>void)|undefined} disconnectedCallback
+ * @typedef {Object} get_set_prop_type
+ * @property {()=>any} value Getter function for getting the property value.
+ * @property {(newValue:any)=>void} value Setter function for setting the property value.
  */
 
 /**
@@ -43,10 +71,16 @@ export class CustomTag {
 	 */
 	slots;
 	/**
+	 * @private
+	 * @type {false|number}
+	 */
+	debounce = false;
+	/**
 	 * @typedef {{
 	 * shadowRoot:ShadowRoot,
 	 * element:HTMLElement,
 	 * propElements:(propName:Extract<keyof NonNullable<PROP>, string>)=>{element:HTMLElement,attributeValue:string}[],
+	 * makeListeners: (listener:listeners_input_type[])=>Listeners;
 	 * }} callback_on_options
 	 */
 	/**
@@ -66,9 +100,12 @@ export class CustomTag {
 	 * )=>string,
 	 * slotNames?:SLOTS,
 	 * propsDefault?:PROP,
-	 * connectedCallback?:(options:callback_on_options)=>(disconnectedCallback|void),
+	 * connectedCallback?:(options:callback_on_options &  {
+	 * makeEffect:(async_fn:()=>Promise<void>)=>void
+	 * })=>void,
 	 * attributeChangedCallback?:(options:attributeChangedCallback_options)=>void,
 	 * tagPrefix?:string,
+	 * debounce?:false|number,
 	 * }} options
 	 */
 	constructor({
@@ -79,6 +116,7 @@ export class CustomTag {
 		connectedCallback = undefined,
 		attributeChangedCallback = undefined,
 		tagPrefix = 'hwc',
+		debounce = false,
 	}) {
 		this.propsDefault = propsDefault;
 		this.tag = `${tagPrefix}-${tagName}`
@@ -89,10 +127,15 @@ export class CustomTag {
 		if (slotNames) {
 			this.slots = slotNames;
 		}
+		this.debounce = debounce;
 		const this_ = this;
 		window.customElements.define(
 			this.tag,
 			class extends HTMLElement {
+				/**
+				 * @type {null|Listeners}
+				 */
+				listener = null;
 				constructor() {
 					super();
 					this.element = this;
@@ -131,6 +174,12 @@ export class CustomTag {
 								}
 								return elem;
 							},
+							makeListeners: (listener) => {
+								if (this.listener === null) {
+									this.listener = new Listeners(listener);
+								}
+								return this.listener;
+							},
 						};
 					}
 					if (propsDefault) {
@@ -144,19 +193,26 @@ export class CustomTag {
 				 */
 				callback_on_options;
 				connectedCallback() {
-					this_.assignPropController(this.element, propsDefault);
-					if (this.shadowRoot && connectedCallback) {
-						this.onUnMounted = connectedCallback(this.callback_on_options) ?? false;
-					}
+					// /**
+					//  * @type {attributeChangedCallback_options}
+					//  */
+					// const obj = {};
+					// for (const key in this.callback_on_options) {
+					// 	obj[key] = this.callback_on_options[key];
+					// }
+					// obj.makeEffect = async (async_fn) => {
+					// 	subscriber = async_fn;
+					// 	await async_fn();
+					// 	subscriber = null;
+					// };
+					// this_.assignPropController(this.element, propsDefault);
+					// if (this.shadowRoot && connectedCallback) {
+					// 	connectedCallback(this.callback_on_options) ?? false;
+					// }
 				}
-				/**
-				 * @private
-				 * @type {(()=>void)|false}
-				 */
-				onUnMounted = false;
 				disconnectedCallback() {
-					if (this.shadowRoot && this.onUnMounted) {
-						this.onUnMounted();
+					if (this.shadowRoot && this.listener?.unsubscribersList.length) {
+						this.listener.unsubs();
 					}
 				}
 				/**
@@ -165,21 +221,21 @@ export class CustomTag {
 				 * @param {string} newValue
 				 */
 				attributeChangedCallback(propName, oldValue, newValue) {
-					/**
-					 * @type {attributeChangedCallback_options}
-					 */
-					const obj = {};
-					for (const key in this.callback_on_options) {
-						obj[key] = this.callback_on_options[key];
-					}
-					obj.changed = {
-						propName,
-						oldValue,
-						newValue,
-					};
-					if (this.shadowRoot && attributeChangedCallback) {
-						attributeChangedCallback(obj);
-					}
+					// /**
+					//  * @type {attributeChangedCallback_options}
+					//  */
+					// const obj = {};
+					// for (const key in this.callback_on_options) {
+					// 	obj[key] = this.callback_on_options[key];
+					// }
+					// obj.changed = {
+					// 	propName,
+					// 	oldValue,
+					// 	newValue,
+					// };
+					// if (this.shadowRoot && attributeChangedCallback) {
+					// 	attributeChangedCallback(obj);
+					// }
 				}
 				static get observedAttributes() {
 					const props__ = [];
@@ -198,6 +254,7 @@ export class CustomTag {
 	 * @returns {void}
 	 */
 	assignPropController = (element, props = undefined) => {
+		const this_ = this;
 		/**
 		 * @type {Record<Extract<keyof NonNullable<PROP>, string>, get_set_prop_type>}
 		 */
@@ -212,7 +269,7 @@ export class CustomTag {
 			 * @type {get_set_prop_type}
 			 */
 			props_[prop] = {
-				get: () => {
+				get value() {
 					if (
 						subscriber &&
 						!subscription.some((fn) => fn.toString() === subscriber.toString())
@@ -221,20 +278,24 @@ export class CustomTag {
 					}
 					return JSON.parse(element.getAttribute(prop) ?? '');
 				},
-				set: async (newValue) => {
+				set value(newValue) {
 					element.setAttribute(prop, JSON.stringify(newValue));
-					Promise.all(
-						subscription.map(async (callback) => {
-							try {
-								return await callback();
-							} catch (error) {
-								console.error('Error in callback:', error);
-								throw error;
-							}
-						})
-					).catch((error) => {
-						console.error('Promise.all failed:', error);
-					});
+					queue_handler.assign(
+						new _QueueObjectFIFO(async () => {
+							await Promise.all(
+								subscription.map(async (callback) => {
+									try {
+										return await callback();
+									} catch (error) {
+										console.error('Error in callback:', error);
+										throw error;
+									}
+								})
+							).catch((error) => {
+								console.error('Promise.all failed:', error);
+							});
+						}, this_.debounce)
+					);
 				},
 			};
 		}
