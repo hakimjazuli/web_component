@@ -64,7 +64,7 @@ export class CustomTag {
 	 * @typedef {{
 	 * shadowRoot:ShadowRoot,
 	 * element:HTMLElement,
-	 * propElements:(propName:Extract<keyof NonNullable<PROP>, string>)=>{element:NodeListOf<HTMLElement|Element>|undefined,value:string}[],
+	 * propElements:(propName:Extract<keyof NonNullable<PROP>, string>)=>{element:HTMLElement,attributeValue:string}[],
 	 * }} callback_on_options
 	 */
 	/**
