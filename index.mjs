@@ -89,6 +89,11 @@ export class CustomTag {
 	 * }} attributeChangedCallback_options
 	 */
 	/**
+	 * @typedef {callback_on_options &  {
+	 * makeEffect:(async_fn:()=>Promise<void>)=>void
+	 * }} connectedCallback_options
+	 */
+	/**
 	 * @public
 	 * @param {{
 	 * tagName:string,
@@ -100,9 +105,7 @@ export class CustomTag {
 	 * )=>string,
 	 * slotNames?:SLOTS,
 	 * propsDefault?:PROP,
-	 * connectedCallback?:(options:callback_on_options &  {
-	 * makeEffect:(async_fn:()=>Promise<void>)=>void
-	 * })=>void,
+	 * connectedCallback?:(options:connectedCallback_options)=>void,
 	 * attributeChangedCallback?:(options:attributeChangedCallback_options)=>void,
 	 * tagPrefix?:string,
 	 * debounce?:false|number,
