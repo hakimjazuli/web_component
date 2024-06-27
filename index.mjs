@@ -21,7 +21,7 @@ class Listeners {
 		for (let i = 0; i < listeners.length; i++) {
 			const { type, element, listener } = listeners[i];
 			element.addEventListener(type, listener);
-			this.unsubscribersList.push(() => {
+			this.addUnsubscribers(() => {
 				element.removeEventListener(type, listener);
 			});
 		}
@@ -35,10 +35,10 @@ class Listeners {
 		});
 	};
 	/**
-	 * @param {()=>void} unsubscriber
+	 * @param {(()=>void)[]} unsubscribers
 	 */
-	addUnsubscriber = (unsubscriber) => {
-		this.unsubscribersList.push(unsubscriber);
+	addUnsubscribers = (...unsubscribers) => {
+		this.unsubscribersList.push(...unsubscribers);
 	};
 	/**
 	 * @private
@@ -83,8 +83,7 @@ export class CustomTag {
 	 * @typedef {{
 	 * shadowRoot:ShadowRoot,
 	 * element:HTMLElement,
-	 * setPropDOM:(propName:Extract<keyof NonNullable<PROP>, string>, value:any)=>void,
-	 * listeners: (listener:listeners_input_type[])=>Listeners;
+	 * reflectToDOM:(propName:Extract<keyof NonNullable<PROP>, string>, value:any)=>void,
 	 * }} callback_on_options
 	 */
 	/**
@@ -94,7 +93,8 @@ export class CustomTag {
 	 */
 	/**
 	 * @typedef {callback_on_options &  {
-	 * effect:(async_fn:()=>Promise<void>)=>void
+	 * effect:(async_fn:()=>Promise<void>)=>void,
+	 * listeners: (listener:listeners_input_type[])=>Listeners,
 	 * }} connectedCallback_options
 	 */
 	/**
@@ -163,7 +163,7 @@ export class CustomTag {
 						this.callback_on_options = {
 							shadowRoot: this.shadowRoot,
 							element: this,
-							setPropDOM: (propName, value) => {
+							reflectToDOM: (propName, value) => {
 								let elements_;
 								if (this.shadowRoot) {
 									elements_ = this.shadowRoot.querySelectorAll(
@@ -189,12 +189,6 @@ export class CustomTag {
 									}
 								});
 							},
-							listeners: (listener) => {
-								if (this.listener === null) {
-									this.listener = new Listeners(listener);
-								}
-								return this.listener;
-							},
 						};
 					}
 					if (propsDefault) {
@@ -219,6 +213,12 @@ export class CustomTag {
 						subscriber = async_fn;
 						await async_fn();
 						subscriber = null;
+					};
+					obj.listeners = (listener) => {
+						if (this.listener === null) {
+							this.listener = new Listeners(listener);
+						}
+						return this.listener;
 					};
 					this_.assignPropController(this.element, propsDefault);
 					if (this.shadowRoot && connectedCallback) {
