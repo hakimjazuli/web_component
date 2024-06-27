@@ -268,7 +268,6 @@ export class CustomTag {
 		};
 	};
 }
-
 /**
  * @param {{
  * tagName:string,
