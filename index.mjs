@@ -80,7 +80,7 @@ export class CustomTag {
 	 * shadowRoot:ShadowRoot,
 	 * element:HTMLElement,
 	 * propElements:(propName:Extract<keyof NonNullable<PROP>, string>)=>{element:HTMLElement,attributeValue:string}[],
-	 * makeListeners: (listener:listeners_input_type[])=>Listeners;
+	 * listeners: (listener:listeners_input_type[])=>Listeners;
 	 * }} callback_on_options
 	 */
 	/**
@@ -177,7 +177,7 @@ export class CustomTag {
 								}
 								return elem;
 							},
-							makeListeners: (listener) => {
+							listeners: (listener) => {
 								if (this.listener === null) {
 									this.listener = new Listeners(listener);
 								}
@@ -195,7 +195,6 @@ export class CustomTag {
 				 * @type {callback_on_options}
 				 */
 				callback_on_options;
-				// connectedCallback_returns = {};
 				connectedCallback() {
 					/**
 					 * @type {connectedCallback_options}
@@ -220,37 +219,30 @@ export class CustomTag {
 					}
 				}
 				/**
-				 * @private
-				 * @type {attributeChangedCallback_options|null}
+				 * @type {attributeChangedCallback_options}
 				 */
-				attributeChangedCallback_obj = null;
+				attributeChangedCallback_option;
 				/**
 				 * @param {Extract<keyof NonNullable<PROP>, string>} propName
 				 * @param {string} oldValue
 				 * @param {string} newValue
 				 */
 				attributeChangedCallback(propName, oldValue, newValue) {
-					if (this.attributeChangedCallback_obj === null) {
-						// @ts-ignore
-						this.attributeChangedCallback_obj = {};
-						for (const key in this.callback_on_options) {
-							// @ts-ignore
-							this.attributeChangedCallback_obj[key] = this.callback_on_options[key];
-						}
-					}
-					if (this.attributeChangedCallback_obj != null) {
-						this.attributeChangedCallback_obj.changed = {
+					// @ts-ignore
+					this.attributeChangedCallback_option = {};
+					Object.assign(this.attributeChangedCallback_option, this.callback_on_options, {
+						changed: {
 							propName,
 							oldValue,
 							newValue,
-						};
-					}
+						},
+					});
 					if (
 						this.shadowRoot &&
 						attributeChangedCallback &&
-						this.attributeChangedCallback_obj
+						this.attributeChangedCallback_option
 					) {
-						attributeChangedCallback(this.attributeChangedCallback_obj);
+						attributeChangedCallback(this.attributeChangedCallback_option);
 					}
 				}
 				static get observedAttributes() {
@@ -270,7 +262,6 @@ export class CustomTag {
 	 * @returns {void}
 	 */
 	assignPropController = (element, props = undefined) => {
-		const this_ = this;
 		/**
 		 * @type {Record<Extract<keyof NonNullable<PROP>, string>, get_set_prop_type>}
 		 */
@@ -295,7 +286,7 @@ export class CustomTag {
 					return JSON.parse(element.getAttribute(prop) ?? '');
 				},
 				set value(newValue) {
-					element.setAttribute(prop, JSON.stringify(newValue));
+					element.setAttribute(prop, JSON.stringify(newValue).replace(/^"(.*)"$/, '$1'));
 					queue_handler.assign(
 						new _QueueObjectFIFO(async () => {
 							await Promise.all(
@@ -310,7 +301,7 @@ export class CustomTag {
 							).catch((error) => {
 								console.error('Promise.all failed:', error);
 							});
-						}, this_.debounce)
+						}, false)
 					);
 				},
 			};
@@ -335,7 +326,7 @@ export class CustomTag {
 	 */
 	makeElement = ({ props = undefined, slots = undefined } = {}) => {
 		const element = document.createElement(this.tag);
-		this.assignPropController(element, props);
+		// this.assignPropController(element, props);
 		if (slots) {
 			for (const slot in this.slots) {
 				const slot_element = slots[slot];
