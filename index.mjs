@@ -1,23 +1,5 @@
 // @ts-check
 
-/**
- * @param {{element:HTMLElement,type:string,listener:()=>((Promise<void>)|void)}[]} functions
- * @returns {()=>void} unsubscribes callback
- */
-export const makeListeners = (functions) => {
-	let unsubs_ = [];
-	for (let i = 0; i < functions.length; i++) {
-		const { element, type, listener } = functions[i];
-		element.addEventListener(type, listener);
-		unsubs_.push(() => element.removeEventListener(type, listener));
-	}
-	return () => {
-		for (let i = 0; i < unsubs_.length; i++) {
-			unsubs_[i]();
-		}
-	};
-};
-
 let subscriber = null;
 
 /**
@@ -37,8 +19,8 @@ export const makeEffect = async (async_fn) => {
  */
 /**
  * @typedef get_set_prop_type
- * @property {()=>string} get
- * @property {(newValue:string)=>void} set
+ * @property {()=>any} get
+ * @property {(newValue:any)=>void} set
  */
 
 /**
@@ -231,13 +213,16 @@ export class CustomTag {
 			 */
 			props_[prop] = {
 				get: () => {
-					if (subscriber) {
+					if (
+						subscriber &&
+						!subscription.some((fn) => fn.toString() === subscriber.toString())
+					) {
 						subscription.push(subscriber);
 					}
-					return element.getAttribute(prop) ?? '';
+					return JSON.parse(element.getAttribute(prop) ?? '');
 				},
 				set: async (newValue) => {
-					element.setAttribute(prop, newValue);
+					element.setAttribute(prop, JSON.stringify(newValue));
 					Promise.all(
 						subscription.map(async (callback) => {
 							try {
