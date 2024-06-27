@@ -84,7 +84,7 @@ export class CustomTag {
 	 * )=>string,
 	 * slotNames?:SLOTS,
 	 * propsDefault?:PROP,
-	 * connectedCallback?:(options:callback_on_options)=>(disconnectedCallback),
+	 * connectedCallback?:(options:callback_on_options)=>(disconnectedCallback|void),
 	 * attributeChangedCallback?:(options:attributeChangedCallback_options)=>void,
 	 * tagPrefix?:string,
 	 * }} options
@@ -164,23 +164,16 @@ export class CustomTag {
 				connectedCallback() {
 					this_.assignPropController(this.element, propsDefault);
 					if (this.shadowRoot && connectedCallback) {
-						const connectedCallback_return = connectedCallback(
-							this.callback_on_options
-						);
-						if (!connectedCallback_return) {
-							this.onUnMounted = () => {};
-							return;
-						}
-						this.onmousedown = connectedCallback_return;
+						this.onUnMounted = connectedCallback(this.callback_on_options) ?? false;
 					}
 				}
 				/**
 				 * @private
-				 * @type {()=>void}
+				 * @type {(()=>void)|false}
 				 */
-				onUnMounted;
+				onUnMounted = false;
 				disconnectedCallback() {
-					if (this.shadowRoot && connectedCallback) {
+					if (this.shadowRoot && this.onUnMounted) {
 						this.onUnMounted();
 					}
 				}
