@@ -114,6 +114,7 @@ export class CustomTag {
 	 * slotNames?:SLOTS,
 	 * propsDefault?:PROP,
 	 * connectedCallback?:(options:connectedCallback_options)=>void,
+	 * adoptedCallback?:(options:callback_on_options)=>void,
 	 * attributeChangedCallback?:(options:attributeChangedCallback_options)=>void,
 	 * tagPrefix?:string,
 	 * debounce?:false|number,
@@ -126,6 +127,7 @@ export class CustomTag {
 			slotNames = undefined,
 			propsDefault = undefined,
 			connectedCallback = undefined,
+			adoptedCallback = undefined,
 			attributeChangedCallback = undefined,
 			tagPrefix = 'hwc',
 			debounce = false,
@@ -154,6 +156,12 @@ export class CustomTag {
 					this.attachShadow({
 						mode: 'open',
 					});
+				}
+				/**
+				 * @type {callback_on_options}
+				 */
+				callback_on_options;
+				connectedCallback() {
 					const template = document.createElement('template');
 					template.innerHTML = htmlTemplate({
 						propAttributes: (propName, attrValues = []) => {
@@ -205,12 +213,6 @@ export class CustomTag {
 							);
 						}
 					}
-				}
-				/**
-				 * @type {callback_on_options}
-				 */
-				callback_on_options;
-				connectedCallback() {
 					/**
 					 * @type {connectedCallback_options}
 					 */
@@ -220,7 +222,7 @@ export class CustomTag {
 					}
 					obj.effect = async (async_fn) => {
 						subscriber = async_fn;
-						await async_fn();
+						queue_handler.assign(new _QueueObjectFIFO(async_fn, debounce));
 						subscriber = null;
 					};
 					obj.listeners = (listener) => {
@@ -232,6 +234,11 @@ export class CustomTag {
 					this_.assignPropController(this.element, propsDefault);
 					if (this.shadowRoot && connectedCallback) {
 						connectedCallback(obj);
+					}
+				}
+				adoptedCallback() {
+					if (adoptedCallback) {
+						adoptedCallback(this.callback_on_options);
 					}
 				}
 				disconnectedCallback() {
@@ -340,21 +347,22 @@ export class CustomTag {
 	/**
 	 * @param {{
 	 * props?:Partial<PROP>,
-	 * slots?:Record<Extract<keyof NonNullable<SLOTS>, string>, HTMLElement>
+	 * slotsAdopt?:Record<Extract<keyof NonNullable<SLOTS>, string>, HTMLElement>
 	 * }} [options]
 	 * @returns {{
 	 * element:HTMLElement,
 	 * prop:Record<Extract<keyof NonNullable<PROP>, string>, get_set_prop_type>,
 	 * }}
 	 */
-	makeElement = ({ props = undefined, slots = undefined } = {}) => {
+	makeElement = (options = {}) => {
+		const { props = undefined, slotsAdopt = undefined } = options;
 		const element = document.createElement(this.tag);
 		this.assignPropController(element, props);
-		if (slots) {
+		if (slotsAdopt) {
 			for (const slot in this.slots) {
-				const slot_element = slots[slot];
+				const slot_element = slotsAdopt[slot];
 				slot_element.setAttribute('slot', slot);
-				element.appendChild(slot_element);
+				document.adoptNode(slot_element);
 			}
 		}
 		return {
@@ -366,9 +374,9 @@ export class CustomTag {
 /**
  * @param {{
  * tagName:string,
+ * suspense: string,
  * initialData:Object.<string,string>[],
  * loopedTag:CustomTag,
- * suspense: string,
  * }} options
  * @returns {{
  * element:HTMLElement,
@@ -376,7 +384,7 @@ export class CustomTag {
  * }}
  */
 export const ForElement = (options) => {
-	const { tagName, initialData, loopedTag, suspense } = options;
+	const { tagName, suspense, initialData, loopedTag } = options;
 	return new CustomTag({
 		tagPrefix: 'for',
 		tagName,
@@ -402,6 +410,7 @@ export const ForElement = (options) => {
 						const elementsProps = JSON.parse(e.changed.newValue);
 						if (!elementsProps.length) {
 							e.element.setAttribute('ready', 'false');
+							return;
 						} else {
 							if (e.element.getAttribute('ready') !== 'true') {
 								e.element.setAttribute('ready', 'true');
