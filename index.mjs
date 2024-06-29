@@ -84,11 +84,6 @@ export class CustomTag {
 	 */
 	slots;
 	/**
-	 * @private
-	 * @type {false|number}
-	 */
-	debounce = false;
-	/**
 	 * @typedef {{
 	 * shadowRoot:ShadowRoot,
 	 * element:HTMLElement,
@@ -124,16 +119,17 @@ export class CustomTag {
 	 * debounce?:false|number,
 	 * }} options
 	 */
-	constructor({
-		tagName,
-		htmlTemplate,
-		slotNames = undefined,
-		propsDefault = undefined,
-		connectedCallback = undefined,
-		attributeChangedCallback = undefined,
-		tagPrefix = 'hwc',
-		debounce = false,
-	}) {
+	constructor(options) {
+		const {
+			tagName,
+			htmlTemplate,
+			slotNames = undefined,
+			propsDefault = undefined,
+			connectedCallback = undefined,
+			attributeChangedCallback = undefined,
+			tagPrefix = 'hwc',
+			debounce = false,
+		} = options;
 		this.propsDefault = propsDefault;
 		this.tag = `${tagPrefix}-${tagName}`
 			.toLowerCase()
@@ -353,7 +349,7 @@ export class CustomTag {
 	 */
 	makeElement = ({ props = undefined, slots = undefined } = {}) => {
 		const element = document.createElement(this.tag);
-		// this.assignPropController(element, props);
+		this.assignPropController(element, props);
 		if (slots) {
 			for (const slot in this.slots) {
 				const slot_element = slots[slot];
@@ -370,21 +366,23 @@ export class CustomTag {
 /**
  * @param {{
  * tagName:string,
- * data:Object.<string,string>[],
- * loopedElement:HTMLElement
+ * initialData:Object.<string,string>[],
+ * loopedTag:CustomTag,
+ * suspense: string,
  * }} options
  * @returns {{
  * element:HTMLElement,
  * prop:Record<'data', get_set_prop_type>,
  * }}
  */
-export const ForElement = ({ tagName, data, loopedElement }) => {
-	const loopedElement_ = loopedElement.cloneNode(true);
+export const ForElement = (options) => {
+	const { tagName, initialData, loopedTag, suspense } = options;
 	return new CustomTag({
 		tagPrefix: 'for',
 		tagName,
 		propsDefault: {
-			data: JSON.stringify(data),
+			data: JSON.stringify(initialData),
+			ready: 'false',
 		},
 		htmlTemplate: (s) => {
 			return /* HTML */ ``;
@@ -392,21 +390,43 @@ export const ForElement = ({ tagName, data, loopedElement }) => {
 		attributeChangedCallback: (e) => {
 			try {
 				switch (e.changed.propName) {
+					case 'ready':
+						if (e.changed.newValue == 'false') {
+							e.shadowRoot.innerHTML = suspense;
+						}
+						break;
 					case 'data':
 						/**
 						 * @type {Object.<string,string>[]}
 						 */
 						const elementsProps = JSON.parse(e.changed.newValue);
-						e.shadowRoot.innerHTML = '';
-						if (!(loopedElement_ instanceof HTMLElement)) {
-							return;
-						}
-						for (let i = 0; i < elementsProps.length; i++) {
-							const elementProp = elementsProps[i];
-							for (const key in elementProp) {
-								loopedElement_.setAttribute(key, elementProp[key]);
+						if (!elementsProps.length) {
+							e.element.setAttribute('ready', 'false');
+						} else {
+							if (e.element.getAttribute('ready') !== 'true') {
+								e.element.setAttribute('ready', 'true');
 							}
-							e.shadowRoot.appendChild(loopedElement_);
+						}
+						let i = 0;
+						e.shadowRoot.childNodes.forEach((element) => {
+							const elementProp = elementsProps[i];
+							if (!elementProp) {
+								element.remove();
+							} else if (element instanceof HTMLElement) {
+								for (const key in elementProp) {
+									if (element.getAttribute(key) !== elementProp[key]) {
+										element.setAttribute(key, elementProp[key]);
+									}
+								}
+							}
+							i++;
+						});
+						if (i < elementsProps.length - 1) {
+							for (i; i < elementsProps.length; i++) {
+								e.shadowRoot.appendChild(
+									loopedTag.makeElement({ props: elementsProps[i] }).element
+								);
+							}
 						}
 						break;
 				}
@@ -416,28 +436,3 @@ export const ForElement = ({ tagName, data, loopedElement }) => {
 		},
 	}).makeElement({});
 };
-/**
- * MUTAIONSSSSSSSSSSSSSSS;
- * MUTAIONSSSSSSSSSSSSSSS;
- * MUTAIONSSSSSSSSSSSSSSS;
- * MUTAIONSSSSSSSSSSSSSSS;
- * MUTAIONSSSSSSSSSSSSSSS;
- * MUTAIONSSSSSSSSSSSSSSS;
- * MUTAIONSSSSSSSSSSSSSSS;
- * MUTAIONSSSSSSSSSSSSSSS;
- * MUTAIONSSSSSSSSSSSSSSS;
- * MUTAIONSSSSSSSSSSSSSSS;
- * MUTAIONSSSSSSSSSSSSSSS;
- * MUTAIONSSSSSSSSSSSSSSS;
- * MUTAIONSSSSSSSSSSSSSSS;
- * MUTAIONSSSSSSSSSSSSSSS;
- * MUTAIONSSSSSSSSSSSSSSS;
- * MUTAIONSSSSSSSSSSSSSSS;
- * MUTAIONSSSSSSSSSSSSSSS;
- * MUTAIONSSSSSSSSSSSSSSS;
- */
-/**
- * @param {string} json_input
- * @returns {string}
- */
-const mutation_check = (json_input) => '';
