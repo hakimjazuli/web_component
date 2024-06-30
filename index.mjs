@@ -324,7 +324,11 @@ export class CustomTag {
 					return JSON.parse(element.getAttribute(prop) ?? '');
 				},
 				set value(newValue) {
-					element.setAttribute(prop, valid_attribute_value(newValue));
+					newValue = valid_attribute_value(newValue);
+					if (this.value === newValue) {
+						return;
+					}
+					element.setAttribute(prop, newValue);
 					queue_handler.assign(
 						new _QueueObjectFIFO(async () => {
 							await Promise.all(
