@@ -147,13 +147,17 @@ export class CustomTag {
 			this.tag,
 			class extends HTMLElement {
 				/**
+				 * @type {ShadowRoot}
+				 */
+				shadowRoot;
+				/**
 				 * @type {null|Listeners}
 				 */
 				listener = null;
 				constructor() {
 					super();
 					this.element = this;
-					this.attachShadow({
+					this.shadowRoot = this.attachShadow({
 						mode: 'open',
 					});
 				}
@@ -221,9 +225,13 @@ export class CustomTag {
 						obj[key] = this.callback_on_options[key];
 					}
 					obj.effect = async (async_fn) => {
-						subscriber = async_fn;
-						queue_handler.assign(new _QueueObjectFIFO(async_fn, debounce));
-						subscriber = null;
+						queue_handler.assign(
+							new _QueueObjectFIFO(async () => {
+								subscriber = async_fn;
+								await async_fn();
+								subscriber = null;
+							}, debounce)
+						);
 					};
 					obj.listeners = (listener) => {
 						if (this.listener === null) {
@@ -347,7 +355,7 @@ export class CustomTag {
 	/**
 	 * @param {{
 	 * props?:Partial<PROP>,
-	 * slotsAdopt?:Record<Extract<keyof NonNullable<SLOTS>, string>, HTMLElement>
+	 * slots?:Record<Extract<keyof NonNullable<SLOTS>, string>, HTMLElement>
 	 * }} [options]
 	 * @returns {{
 	 * element:HTMLElement,
@@ -355,14 +363,14 @@ export class CustomTag {
 	 * }}
 	 */
 	makeElement = (options = {}) => {
-		const { props = undefined, slotsAdopt = undefined } = options;
+		const { props = undefined, slots = undefined } = options;
 		const element = document.createElement(this.tag);
 		this.assignPropController(element, props);
-		if (slotsAdopt) {
+		if (slots) {
 			for (const slot in this.slots) {
-				const slot_element = slotsAdopt[slot];
+				const slot_element = slots[slot];
 				slot_element.setAttribute('slot', slot);
-				document.adoptNode(slot_element);
+				element.appendChild(slot_element);
 			}
 		}
 		return {
