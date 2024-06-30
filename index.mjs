@@ -87,7 +87,7 @@ export class CustomTag {
 	 * @typedef {{
 	 * shadowRoot:ShadowRoot,
 	 * element:HTMLElement,
-	 * reflectToDOM:(propName:Extract<keyof NonNullable<PROP>, string>, value:any)=>void,
+	 * reactiveDOM:(propName:Extract<keyof NonNullable<PROP>, string>, value:any)=>void,
 	 * }} callback_on_options
 	 */
 	/**
@@ -180,7 +180,7 @@ export class CustomTag {
 						this.callback_on_options = {
 							shadowRoot: this.shadowRoot,
 							element: this,
-							reflectToDOM: (propName, value) => {
+							reactiveDOM: (propName, value) => {
 								let elements_;
 								if (this.shadowRoot) {
 									elements_ = this.shadowRoot.querySelectorAll(
