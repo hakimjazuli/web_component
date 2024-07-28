@@ -21,7 +21,7 @@ export class CustomElement {
 	makeElement = (options) => {
 		const element = document.createElement(this.TNV);
 		if (options) {
-			const { props = {}, slots = {} } = options;
+			const { props, slots } = options;
 			for (const prop in props) {
 				element.setAttribute(prop, props[prop]);
 			}
@@ -109,11 +109,17 @@ export class CustomElement {
 						adoptedCallback = undefined,
 					} = connectedCallback(this));
 					for (const prop in defaultProps) {
+						if (this.hasAttribute(prop)) {
+							this.setAttribute(prop, this.getAttribute(prop) ?? '');
+							continue;
+						}
 						this.setAttribute(prop, defaultProps[prop]);
 					}
 				}
 				async disconnectedCallback() {
-					disconnectedCallback();
+					if (disconnectedCallback) {
+						disconnectedCallback();
+					}
 				}
 				/**
 				 * @param {Prop} propName
@@ -121,7 +127,9 @@ export class CustomElement {
 				 * @param {string} newValue
 				 */
 				attributeChangedCallback(propName, oldValue, newValue) {
-					attributeChangedCallback(propName, oldValue, newValue);
+					if (attributeChangedCallback) {
+						attributeChangedCallback(propName, oldValue, newValue);
+					}
 				}
 				adoptedCallback() {
 					if (adoptedCallback) {
