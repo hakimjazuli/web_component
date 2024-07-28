@@ -44,7 +44,7 @@ export class CustomElement {
 	 * @property {defaultProps} defaultProps
 	 * @property {(create_slot:(slot_name:SlotName,attributes?:Record.<string,string>)=>string)=>string} htmlTemplate
 	 * - create_slots: function that generate slot string;
-	 * @property {(props:defaultProps,shadowRoot:ShadowRoot)=>({
+	 * @property {(props:defaultProps,ShadowRoot:ShadowRoot)=>({
 	 * disconnectedCallback:()=>void,
 	 * attributeChangedCallback: (propName:Prop, oldValue:string, newValue:string)=>void,
 	 * adoptedCallback?:()=>void,
