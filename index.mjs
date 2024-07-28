@@ -18,7 +18,7 @@ export class CustomElement {
 	 * }} [options]
 	 * @returns {HTMLElement|Element}
 	 */
-	make_element = (options) => {
+	makeElement = (options) => {
 		const element = document.createElement(this.TNV);
 		if (options) {
 			const { props = {}, slots = {} } = options;
