@@ -44,7 +44,7 @@ export class CustomElement {
 	 * @property {defaultProps} defaultProps
 	 * @property {(create_slot:(slot_name:SlotName,attributes?:Record.<string,string>)=>string)=>string} htmlTemplate
 	 * - create_slots: function that generate slot string;
-	 * @property {(props:defaultProps)=>({
+	 * @property {(props:defaultProps,shadowRoot:HTMLElement['shadowRoot'])=>({
 	 * disconnectedCallback:()=>void,
 	 * attributeChangedCallback: (propName:Prop, oldValue:string, newValue:string)=>void,
 	 * adoptedCallback?:()=>void,
@@ -105,7 +105,7 @@ export class CustomElement {
 						disconnectedCallback,
 						attributeChangedCallback,
 						adoptedCallback = undefined,
-					} = connectedCallback(defaultProps));
+					} = connectedCallback(defaultProps, this.shadowRoot));
 					for (const prop in defaultProps) {
 						this.setAttribute(prop, defaultProps[prop]);
 					}
