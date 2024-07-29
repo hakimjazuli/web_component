@@ -5,6 +5,7 @@ let tag_index = 1;
 const generateTag = () => {
 	let remainder = (tag_index - 1) % 26;
 	tag_index = Math.floor((tag_index - 1) / 26);
+	++tag_index;
 	const result = String.fromCharCode(97 + remainder) + '';
 	return result;
 };
