@@ -56,9 +56,12 @@ export class CustomTag {
 	 * props?:Record.<Prop, string>,
 	 * slots?:Record.<SlotName, HTMLElement|Element>
 	 * }} [options]
-	 * @returns {HTMLElement|Element}
+	 * @returns {{
+	 * element:HTMLElement|Element,
+	 * HTMLString:string
+	 * }}
 	 */
-	makeElement = (options) => {
+	make = (options) => {
 		const element = document.createElement(this.TNV);
 		if (options) {
 			const { props, slots } = options;
@@ -71,7 +74,10 @@ export class CustomTag {
 				element.appendChild(childElement);
 			}
 		}
-		return element;
+		return {
+			element,
+			HTMLString: element.outerHTML,
+		};
 	};
 	/**
 	 * @private
