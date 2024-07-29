@@ -38,8 +38,7 @@ export class AttrHelpers {
 	 * @returns {string}
 	 */
 	validate = (attrHelperValue) => {
-		// @ts-ignore
-		return validateHtmlTagAttrName(attrHelperValue);
+		return validateHtmlTagAttrName(attrHelperValue.toString());
 	};
 	/**
 	 * @param {attrHelpers} attrHelpers
@@ -91,7 +90,8 @@ export class CustomTag {
 	 * @typedef CustomElementParameters
 	 * @property {defaultProps} defaultProps
 	 * @property {(
-	 * create_slot:(slot_name:SlotName,attributes?:Record.<string,string>)=>string
+	 * create_slot:(slot_name:SlotName,attributes?:Record.<string,string>)=>string,
+	 * props_manipulator:(props: Prop) => { value: string; }
 	 * )=>{
 	 * htmlTemplate: string,
 	 * connectedCallback:(shadwRoot:ShadowRoot,element:HTMLElement)=>{
@@ -136,16 +136,29 @@ export class CustomTag {
 					super();
 					this.shadowRoot = this.attachShadow({ mode: 'open' });
 					const template = document.createElement('template');
-					({ htmlTemplate, connectedCallback } = lifecycle((slot_name, attributes) => {
-						const attrs_ = [];
-						for (const attribute in attributes) {
-							attrs_.push(`${attribute}="${attributes[attribute]}"`);
+					const elem = this;
+					({ htmlTemplate, connectedCallback } = lifecycle(
+						(slot_name, attributes) => {
+							const attrs_ = [];
+							for (const attribute in attributes) {
+								attrs_.push(`${attribute}="${attributes[attribute]}"`);
+							}
+							return /* HTML */ `<slot
+								name="${slot_name.toString()}"
+								${attrs_.join(' ')}
+							></slot>`;
+						},
+						(propName) => {
+							return {
+								get value() {
+									return elem.getAttribute(propName.toString()) ?? '';
+								},
+								set value(newValue) {
+									elem.setAttribute(propName.toString(), newValue);
+								},
+							};
 						}
-						return /* HTML */ `<slot
-							name="${slot_name.toString()}"
-							${attrs_.join(' ')}
-						></slot>`;
-					}));
+					));
 					template.innerHTML = htmlTemplate;
 					this.shadowRoot.appendChild(template.content.cloneNode(true));
 				}
