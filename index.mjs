@@ -3,10 +3,11 @@
 let tag_index = 1;
 
 const generateTag = () => {
-	let remainder = (tag_index - 1) % 26;
-	tag_index = Math.floor((tag_index - 1) / 26);
-	++tag_index;
+	let tag_index_ = tag_index;
+	let remainder = (tag_index_ - 1) % 26;
+	tag_index_ = Math.floor((tag_index_ - 1) / 26);
 	const result = String.fromCharCode(97 + remainder) + '';
+	tag_index++;
 	return result;
 };
 
