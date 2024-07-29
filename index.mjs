@@ -60,7 +60,7 @@ export class CustomTag {
 	 * }} [options]
 	 * @returns {{
 	 * element:HTMLElement|Element,
-	 * HTMLString:string
+	 * string:string
 	 * }}
 	 */
 	make = (options) => {
@@ -78,7 +78,7 @@ export class CustomTag {
 		}
 		return {
 			element,
-			HTMLString: element.outerHTML,
+			string: element.outerHTML,
 		};
 	};
 	/**
