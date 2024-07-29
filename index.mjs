@@ -37,7 +37,7 @@ export class AttrHelpers {
 	 * @param {attrHelperValue} attrHelperValue
 	 * @returns {string}
 	 */
-	validate = (attrHelperValue) => {
+	V = (attrHelperValue) => {
 		return validateHtmlTagAttrName(attrHelperValue.toString());
 	};
 	/**
