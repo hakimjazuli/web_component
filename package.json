@@ -20,8 +20,5 @@
 	"license": "MIT",
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 1"
-	},
-	"dependencies": {
-		"@html_first/simple_signal": "^2.0.0"
 	}
 }
