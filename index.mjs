@@ -150,6 +150,7 @@ export class CustomTag {
 							return {
 								html: () => {
 									const slot_element = document.createElement('slot');
+									slot_element.setAttribute('name', slot_name.toString());
 									if (slot_modifier) {
 										slot_modifier(slot_element);
 									}
