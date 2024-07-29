@@ -89,7 +89,7 @@ export class CustomTag {
 	 * @property {defaultProps} defaultProps
 	 * @property {(
 	 * props_manipulator:(props: Prop) => { value: string; },
-	 * create_slot:(slot_name:SlotName, slot_modifier?:(element:HTMLSlotElement)=>void)=>{html:()=>string,selector:()=>string},
+	 * create_slot:(slot_name:SlotName, additional_attributes?:{[auto_validated_attribute_name:string]:string})=>{html:()=>string,selector:()=>string},
 	 * )=>{
 	 * htmlTemplate: string,
 	 * connectedCallback:(shadwRoot:ShadowRoot,element:HTMLElement)=>{
@@ -146,13 +146,16 @@ export class CustomTag {
 								},
 							};
 						},
-						(slot_name, slot_modifier) => {
+						(slot_name, additional_attributes) => {
 							return {
 								html: () => {
 									const slot_element = document.createElement('slot');
 									slot_element.setAttribute('name', slot_name.toString());
-									if (slot_modifier) {
-										slot_modifier(slot_element);
+									for (const attributeName in additional_attributes) {
+										slot_element.setAttribute(
+											validateHtmlTagAttrName(attributeName),
+											additional_attributes[attributeName]
+										);
 									}
 									const string = slot_element.outerHTML;
 									slot_element.remove();
