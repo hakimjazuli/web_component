@@ -166,11 +166,6 @@ export class CustomTag {
 						this.setAttribute(prop, defaultProps[prop]);
 					}
 				}
-				async disconnectedCallback() {
-					if (disconnectedCallback) {
-						disconnectedCallback();
-					}
-				}
 				/**
 				 * @param {Prop} propName
 				 * @param {string} oldValue
@@ -179,6 +174,11 @@ export class CustomTag {
 				attributeChangedCallback(propName, oldValue, newValue) {
 					if (attributeChangedCallback) {
 						attributeChangedCallback(propName, oldValue, newValue);
+					}
+				}
+				async disconnectedCallback() {
+					if (disconnectedCallback) {
+						disconnectedCallback();
 					}
 				}
 				adoptedCallback() {
