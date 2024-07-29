@@ -154,8 +154,8 @@ export class CustomTag {
 				}
 				connectedCallback() {
 					({
-						disconnectedCallback,
 						attributeChangedCallback,
+						disconnectedCallback,
 						adoptedCallback = () => {},
 					} = connectedCallback(this.shadowRoot, this));
 					for (const prop in defaultProps) {
