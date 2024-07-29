@@ -88,7 +88,7 @@ export class CustomTag {
 	 * @typedef CustomElementParameters
 	 * @property {defaultProps} defaultProps
 	 * @property {(
-	 * create_slot:(slot_name:SlotName,attributes?:Record.<string,string>)=>string,
+	 * create_slot:(slot_name:SlotName)=>string,
 	 * props_manipulator:(props: Prop) => { value: string; }
 	 * )=>{
 	 * htmlTemplate: string,
@@ -136,15 +136,8 @@ export class CustomTag {
 					const template = document.createElement('template');
 					const elem = this;
 					({ htmlTemplate, connectedCallback } = lifecycle(
-						(slot_name, attributes) => {
-							const attrs_ = [];
-							for (const attribute in attributes) {
-								attrs_.push(`${attribute}="${attributes[attribute]}"`);
-							}
-							return /* HTML */ `<slot
-								name="${slot_name.toString()}"
-								${attrs_.join(' ')}
-							></slot>`;
+						(slot_name) => {
+							return /* HTML */ `<slot name="${slot_name.toString()}"></slot>`;
 						},
 						(propName) => {
 							return {
