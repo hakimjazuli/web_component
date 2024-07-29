@@ -29,11 +29,11 @@ const validateHtmlTagAttrName = (string) => {
  */
 export class AttrHelpers {
 	/**
-	 * validate
+	 * valid name
 	 * @param {attrHelperValue} attrHelperValue
 	 * @returns {string}
 	 */
-	V = (attrHelperValue) => {
+	N = (attrHelperValue) => {
 		return validateHtmlTagAttrName(attrHelperValue.toString());
 	};
 	/**
