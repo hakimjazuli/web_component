@@ -54,7 +54,7 @@ export class CustomTag {
 	/**
 	 * @param {{
 	 * props?:Record.<Prop, string>,
-	 * slots?:Record.<SlotName, HTMLElement>
+	 * slots?:Record.<SlotName, HTMLElement|Element>
 	 * }} [options]
 	 * @returns {HTMLElement|Element}
 	 */
