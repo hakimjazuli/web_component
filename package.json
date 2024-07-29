@@ -1,27 +1,27 @@
 {
 	"name": "@html_first/web_component",
 	"version": "0.11.0",
-	"description": "simplify native web component making with jsdoc",
-	"main": "index.mjs",
-	"scripts": {
-		"test": "echo \"Error: no test specified\" && exit 1"
-	},
+	"author": "hakim_jazuli",
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/hakimjazuli/web_component.git"
 	},
+	"main": "index.mjs",
+	"bugs": {
+		"url": "https://github.com/hakimjazuli/web_component/issues"
+	},
+	"description": "simplify native web component making with jsdoc",
+	"homepage": "https://github.com/hakimjazuli/web_component#readme",
 	"keywords": [
 		"native api",
 		"native web component",
 		"web component"
 	],
-	"author": "hakim_jazuli",
 	"license": "MIT",
-	"bugs": {
-		"url": "https://github.com/hakimjazuli/web_component/issues"
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1"
 	},
-	"homepage": "https://github.com/hakimjazuli/web_component#readme",
 	"dependencies": {
-		"@html_first/simple_signal": "^1.5.1"
+		"@html_first/simple_signal": "^2.0.0"
 	}
 }

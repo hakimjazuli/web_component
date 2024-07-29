@@ -1,5 +1,54 @@
 // @ts-check
 
+let tag_index = 1;
+
+const generateTag = () => {
+	let remainder = (tag_index - 1) % 26;
+	tag_index = Math.floor((tag_index - 1) / 26);
+	const result = String.fromCharCode(97 + remainder) + '';
+	return result;
+};
+
+/**
+ * @param {string} string
+ * @returns {string}
+ */
+const validateHtmlTagAttrName = (string) => {
+	return string
+		.toLowerCase()
+		.replace(/[^a-z0-9]/g, '-')
+		.replace(/^-+|-+$/g, '')
+		.replace(/-+/g, '-');
+};
+
+/**
+ * @template {{
+ * [x: string]: ''
+ * }} attrHelpers
+ * @template {keyof NonNullable<attrHelpers>} attrHelperValue
+ */
+export class AttrHelpers {
+	/**
+	 * @private
+	 * @type {attrHelpers}
+	 */
+	H;
+	/**
+	 * @param {attrHelperValue} attrHelperValue
+	 * @returns {string}
+	 */
+	validate = (attrHelperValue) => {
+		// @ts-ignore
+		return validateHtmlTagAttrName(attrHelperValue);
+	};
+	/**
+	 * @param {attrHelpers} attrHelpers
+	 */
+	constructor(attrHelpers) {
+		this.H = attrHelpers;
+	}
+}
+
 /**
  * @template {{
  * [x: string]: ''
@@ -10,7 +59,7 @@
  * }} defaultProps
  * @template {keyof NonNullable<defaultProps>} Prop
  */
-export class CustomElement {
+export class CustomTag {
 	/**
 	 * @param {{
 	 * props?:Record.<Prop, string>,
@@ -40,35 +89,35 @@ export class CustomElement {
 	TNV;
 	/**
 	 * @typedef CustomElementParameters
-	 * @property {string} tagName
 	 * @property {defaultProps} defaultProps
-	 * @property {(create_slot:(slot_name:SlotName,attributes?:Record.<string,string>)=>string)=>string} htmlTemplate
-	 * - create_slots: function that generate slot string;
-	 * @property {(HTMLElement:HTMLElement & {shadowRoot:ShadowRoot})=>({
+	 * @property {(
+	 * create_slot:(slot_name:SlotName,attributes?:Record.<string,string>)=>string
+	 * )=>{
+	 * htmlTemplate: string,
+	 * connectedCallback:(shadwRoot:ShadowRoot,element:HTMLElement)=>{
 	 * disconnectedCallback:()=>void,
-	 * attributeChangedCallback: (propName:Prop, oldValue:string, newValue:string)=>void,
+	 * attributeChangedCallback:(propName:Prop, oldValue:string, newValue:string)=>void,
 	 * adoptedCallback?:()=>void,
-	 * })} connectedCallback
+	 * },
+	 * }} lifecycle
 	 * @property {string} [tagPrefix]
 	 * @property {Slots} [slots]
+	 * @property {string} [tagName]
 	 */
 	/**
 	 * @param {CustomElementParameters} options
 	 */
 	constructor(options) {
 		const {
-			tagName,
 			defaultProps,
-			htmlTemplate,
-			connectedCallback,
+			lifecycle,
 			tagPrefix = 'hf-wc',
+			tagName = generateTag(),
 			slots,
 		} = options;
-		this.TNV = `${tagPrefix}-${tagName}`
-			.toLowerCase()
-			.replace(/[^a-z0-9]/g, '-')
-			.replace(/^-+|-+$/g, '')
-			.replace(/-+/g, '-');
+		this.TNV = validateHtmlTagAttrName(`${tagPrefix}-${tagName}`);
+		let htmlTemplate;
+		let connectedCallback;
 		let disconnectedCallback;
 		let attributeChangedCallback;
 		let adoptedCallback;
@@ -87,7 +136,7 @@ export class CustomElement {
 					super();
 					this.shadowRoot = this.attachShadow({ mode: 'open' });
 					const template = document.createElement('template');
-					template.innerHTML = htmlTemplate((slot_name, attributes) => {
+					({ htmlTemplate, connectedCallback } = lifecycle((slot_name, attributes) => {
 						const attrs_ = [];
 						for (const attribute in attributes) {
 							attrs_.push(`${attribute}="${attributes[attribute]}"`);
@@ -96,7 +145,8 @@ export class CustomElement {
 							name="${slot_name.toString()}"
 							${attrs_.join(' ')}
 						></slot>`;
-					});
+					}));
+					template.innerHTML = htmlTemplate;
 					this.shadowRoot.appendChild(template.content.cloneNode(true));
 				}
 				static get observedAttributes() {
@@ -106,8 +156,8 @@ export class CustomElement {
 					({
 						disconnectedCallback,
 						attributeChangedCallback,
-						adoptedCallback = undefined,
-					} = connectedCallback(this));
+						adoptedCallback = () => {},
+					} = connectedCallback(this.shadowRoot, this));
 					for (const prop in defaultProps) {
 						if (this.hasAttribute(prop)) {
 							this.setAttribute(prop, this.getAttribute(prop) ?? '');
