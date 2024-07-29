@@ -29,11 +29,7 @@ const validateHtmlTagAttrName = (string) => {
  */
 export class AttrHelpers {
 	/**
-	 * @private
-	 * @type {attrHelpers}
-	 */
-	H;
-	/**
+	 * validate
 	 * @param {attrHelperValue} attrHelperValue
 	 * @returns {string}
 	 */
@@ -43,9 +39,7 @@ export class AttrHelpers {
 	/**
 	 * @param {attrHelpers} attrHelpers
 	 */
-	constructor(attrHelpers) {
-		this.H = attrHelpers;
-	}
+	constructor(attrHelpers) {}
 }
 
 /**
