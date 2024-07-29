@@ -88,11 +88,10 @@ export class CustomTag {
 	 * @typedef CustomElementParameters
 	 * @property {defaultProps} defaultProps
 	 * @property {(
-	 * props_manipulator:(props: Prop) => { value: string; },
 	 * create_slot:(slot_name:SlotName, additional_attributes?:{[auto_validated_attribute_name:string]:string})=>{html:()=>string,selector:()=>string},
 	 * )=>{
 	 * htmlTemplate: string,
-	 * connectedCallback:(shadwRoot:ShadowRoot,element:HTMLElement)=>{
+	 * connectedCallback:(shadwRoot:ShadowRoot,props_manipulator:(props: Prop) => { value: string; })=>{
 	 * disconnectedCallback:()=>void,
 	 * attributeChangedCallback:(propName:Prop, oldValue:string, newValue:string)=>void,
 	 * adoptedCallback?:()=>void,
@@ -115,6 +114,13 @@ export class CustomTag {
 		} = options;
 		this.TNV = validateHtmlTagAttrName(`${tagPrefix}-${tagName}`);
 		let htmlTemplate;
+		/**
+		 * @type {(shadwRoot:ShadowRoot,props_manipulator:(props: Prop) => { value: string; })=>{
+		 * disconnectedCallback:()=>void,
+		 * attributeChangedCallback:(propName:Prop, oldValue:string, newValue:string)=>void,
+		 * adoptedCallback?:()=>void,
+		 * }}
+		 */
 		let connectedCallback;
 		let disconnectedCallback;
 		let attributeChangedCallback;
@@ -134,18 +140,7 @@ export class CustomTag {
 					super();
 					this.shadowRoot = this.attachShadow({ mode: 'open' });
 					const template = document.createElement('template');
-					const elem = this;
 					({ htmlTemplate, connectedCallback } = lifecycle(
-						(propName) => {
-							return {
-								get value() {
-									return elem.getAttribute(propName.toString()) ?? '';
-								},
-								set value(newValue) {
-									elem.setAttribute(propName.toString(), newValue);
-								},
-							};
-						},
 						(slot_name, additional_attributes) => {
 							return {
 								html: () => {
@@ -176,7 +171,17 @@ export class CustomTag {
 						attributeChangedCallback,
 						disconnectedCallback,
 						adoptedCallback = () => {},
-					} = connectedCallback(this.shadowRoot, this));
+					} = connectedCallback(this.shadowRoot, (propName) => {
+						const this_ = this;
+						return {
+							get value() {
+								return this_.getAttribute(propName.toString()) ?? '';
+							},
+							set value(newValue) {
+								this_.setAttribute(propName.toString(), newValue);
+							},
+						};
+					}));
 					for (const prop in defaultProps) {
 						if (this.hasAttribute(prop)) {
 							this.setAttribute(prop, this.getAttribute(prop) ?? '');
