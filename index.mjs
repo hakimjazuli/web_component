@@ -90,7 +90,7 @@ export class CustomTag {
 	 * @typedef CustomElementParameters
 	 * @property {defaultProps} defaultProps
 	 * @property {(
-	 * create_slot:(slot_name:SlotName)=>string,
+	 * create_slot:(slot_name:SlotName, additional_attribute?:Record.<string,string>)=>string,
 	 * )=>{
 	 * htmlTemplate: string,
 	 * connectedCallback:(shadwRoot:ShadowRoot,props_manipulator:(props: Prop) => { value: string; })=>{
@@ -143,7 +143,18 @@ export class CustomTag {
 					this.shadowRoot = this.attachShadow({ mode: 'open' });
 					const template = document.createElement('template');
 					({ htmlTemplate, connectedCallback } = lifecycle(
-						(slot_name) => `<slot name="${slot_name.toString()}"></slot>`
+						(slot_name, additional_attribute) => {
+							let attribute_value = [];
+							for (const attributeName in additional_attribute) {
+								attribute_value.push(
+									`${attributeName}="${additional_attribute[attributeName]}"`
+								);
+							}
+							return /* HTML */ `<slot
+								name="${slot_name.toString()}"
+								${attribute_value.join(' ')}
+							></slot>`;
+						}
 					));
 					template.innerHTML = htmlTemplate;
 					this.shadowRoot.appendChild(template.content.cloneNode(true));
