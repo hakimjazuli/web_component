@@ -88,8 +88,8 @@ export class CustomTag {
 	 * @typedef CustomElementParameters
 	 * @property {defaultProps} defaultProps
 	 * @property {(
-	 * create_slot:(slot_name:SlotName)=>string,
-	 * props_manipulator:(props: Prop) => { value: string; }
+	 * props_manipulator:(props: Prop) => { value: string; },
+	 * create_slot:(slot_name:SlotName, slot_modifier?:(element:HTMLSlotElement)=>void)=>{html:()=>string,selector:()=>string},
 	 * )=>{
 	 * htmlTemplate: string,
 	 * connectedCallback:(shadwRoot:ShadowRoot,element:HTMLElement)=>{
@@ -136,9 +136,6 @@ export class CustomTag {
 					const template = document.createElement('template');
 					const elem = this;
 					({ htmlTemplate, connectedCallback } = lifecycle(
-						(slot_name) => {
-							return /* HTML */ `<slot name="${slot_name.toString()}"></slot>`;
-						},
 						(propName) => {
 							return {
 								get value() {
@@ -147,6 +144,20 @@ export class CustomTag {
 								set value(newValue) {
 									elem.setAttribute(propName.toString(), newValue);
 								},
+							};
+						},
+						(slot_name, slot_modifier) => {
+							return {
+								html: () => {
+									const slot_element = document.createElement('slot');
+									if (slot_modifier) {
+										slot_modifier(slot_element);
+									}
+									const string = slot_element.outerHTML;
+									slot_element.remove();
+									return string;
+								},
+								selector: () => `slot[name="${slot_name.toString()}"]`,
 							};
 						}
 					));
