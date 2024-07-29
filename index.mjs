@@ -26,21 +26,19 @@ const validateHtmlTagAttrName = (string) => {
  * [x: string]: ''
  * }} attrHelpers
  * @template {keyof NonNullable<attrHelpers>} attrHelperValue
+ * @param {attrHelpers} attrHelpers
  */
-export class AttrHelpers {
+export const attrHelper = (attrHelpers) => {
 	/**
-	 * valid name
 	 * @param {attrHelperValue} attrHelperValue
-	 * @returns {string}
 	 */
-	name = (attrHelperValue) => {
-		return validateHtmlTagAttrName(attrHelperValue.toString());
+	return (attrHelperValue) => {
+		if (attrHelperValue in attrHelpers) {
+			return validateHtmlTagAttrName(attrHelperValue.toString());
+		}
+		return '';
 	};
-	/**
-	 * @param {attrHelpers} attrHelpers
-	 */
-	constructor(attrHelpers) {}
-}
+};
 
 /**
  * @template {{

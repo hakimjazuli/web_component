@@ -21,4 +21,7 @@ npm i @html_first/web_component
 ## classes API
 
 -   `CustomTag`;
--   `AttrHelpers`;
+
+## sync function API
+
+-   `attrHelper`;
