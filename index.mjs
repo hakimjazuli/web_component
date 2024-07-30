@@ -27,19 +27,19 @@ const validateHtmlTagAttrName = (string) => {
  * @template {{
  * [x: string]: ''
  * }} attrHelpers
- * @template {keyof NonNullable<attrHelpers>} attrHelperValue
  * @param {attrHelpers} attrHelpers
+ * @returns {Record.<keyof NonNullable<attrHelpers>, string>}
  */
 export const attrHelper = (attrHelpers) => {
 	/**
-	 * @param {attrHelperValue} attrHelperValue
+	 * @type {Record.<keyof NonNullable<attrHelpers>, string>}
 	 */
-	return (attrHelperValue) => {
-		if (attrHelperValue in attrHelpers) {
-			return validateHtmlTagAttrName(attrHelperValue.toString());
-		}
-		return '';
-	};
+	// @ts-ignore
+	const attrs_ = {};
+	for (const attr in attrHelpers) {
+		attrs_[attr] = validateHtmlTagAttrName(attr.toString());
+	}
+	return attrs_;
 };
 
 /**
