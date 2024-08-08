@@ -1,5 +1,11 @@
 // @ts-check
 
+import {
+	Let as Let_,
+	Derived as Derived_,
+	OnViewPort as OnViewPort_,
+} from '@html_first/simple_signal';
+
 let tag_index = 1;
 
 const generateTag = () => {
@@ -23,24 +29,75 @@ const validateHtmlTagAttrName = (string) => {
 		.replace(/-+/g, '-');
 };
 
-/**
- * @template {{
- * [x: string]: ''
- * }} attrHelpers
- * @param {attrHelpers} attrHelpers
- * @returns {Record.<keyof NonNullable<attrHelpers>, string>}
- */
-export const attrHelper = (attrHelpers) => {
+const spaHelper = new (class {
 	/**
-	 * @type {Record.<keyof NonNullable<attrHelpers>, string>}
+	 * attribute index
+	 * @private
+	 * @type {Number}
 	 */
-	// @ts-ignore
-	const attrs_ = {};
-	for (const attr in attrHelpers) {
-		attrs_[attr] = validateHtmlTagAttrName(attr.toString());
+	AI = 1;
+	attr = '';
+	/**
+	 * attribute index
+	 * @return {string}
+	 */
+	AG = () => {
+		return (this.attr = `atla-as-attr-${this.AI++}`);
+	};
+	/**
+	 * @type {import('@html_first/simple_signal').documentScope}
+	 */
+	currentDocumentScope = document;
+})();
+
+/**
+ * @template V
+ */
+export class Let extends Let_ {
+	/**
+	 * @param {V} value
+	 */
+	constructor(value) {
+		super(value, spaHelper.AG(), spaHelper.currentDocumentScope);
 	}
-	return attrs_;
-};
+	attr = spaHelper.attr;
+	get value() {
+		return super.value;
+	}
+	set value(v) {
+		super.value = v;
+	}
+}
+
+/**
+ * @template V
+ */
+export class Derived extends Derived_ {
+	attr = spaHelper.attr;
+	/**
+	 * @param {()=>Promise<V>} asyncCallback
+	 */
+	constructor(asyncCallback) {
+		super(asyncCallback, spaHelper.AG(), spaHelper.currentDocumentScope);
+	}
+	get value() {
+		return super.value;
+	}
+	set value(v) {
+		super.value = v;
+	}
+}
+
+export class OnViewPort extends OnViewPort_ {
+	/**
+	 * @param {(element:IntersectionObserverEntry['target'])=>Promise<void>} OnViewCallback
+	 * @param {(element:IntersectionObserverEntry['target'], unObserve:()=>void)=>Promise<void>} [onExitingViewport]
+	 * undefined: will automatically fires unObserve callback;
+	 */
+	constructor(OnViewCallback, onExitingViewport) {
+		super(spaHelper.AG(), OnViewCallback, onExitingViewport, spaHelper.currentDocumentScope);
+	}
+}
 
 /**
  * @template {{
@@ -142,6 +199,8 @@ export class CustomTag {
 					super();
 					this.shadowRoot = this.attachShadow({ mode: 'open' });
 					const template = document.createElement('template');
+					const curentScope = spaHelper.currentDocumentScope;
+					spaHelper.currentDocumentScope = this.shadowRoot;
 					({ htmlTemplate, connectedCallback } = lifecycle(
 						(slot_name, additional_attribute) => {
 							let attribute_value = [];
@@ -156,6 +215,7 @@ export class CustomTag {
 							></slot>`;
 						}
 					));
+					spaHelper.currentDocumentScope = curentScope;
 					template.innerHTML = htmlTemplate;
 					this.shadowRoot.appendChild(template.content.cloneNode(true));
 				}
