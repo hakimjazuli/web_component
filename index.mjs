@@ -6,14 +6,14 @@ import {
 	OnViewPort as OnViewPort_,
 } from '@html_first/simple_signal';
 
-let tag_index = 1;
+let tagIndex = 1;
 
 const generateTag = () => {
-	let tag_index_ = tag_index;
-	let remainder = (tag_index_ - 1) % 26;
-	tag_index_ = Math.floor((tag_index_ - 1) / 26);
+	let tagIndex_ = tagIndex;
+	let remainder = (tagIndex_ - 1) % 26;
+	tagIndex_ = Math.floor((tagIndex_ - 1) / 26);
 	const result = String.fromCharCode(97 + remainder) + '';
-	tag_index++;
+	tagIndex++;
 	return result;
 };
 
@@ -147,10 +147,10 @@ export class CustomTag {
 	 * @typedef CustomElementParameters
 	 * @property {defaultProps} defaultProps
 	 * @property {(
-	 * create_slot:(slot_name:SlotName, additional_attribute?:Record.<string,string>)=>string,
+	 * createSlot:(slotName:SlotName, additionalAttributes?:Record.<string,string>)=>string,
 	 * )=>{
 	 * htmlTemplate: string,
-	 * connectedCallback:(shadwRoot:ShadowRoot,props_manipulator:(props: Prop) => { value: string; })=>{
+	 * connectedCallback:(shadwRoot:ShadowRoot,propsManipulator:(props: Prop) => { value: string; })=>{
 	 * disconnectedCallback:()=>void,
 	 * attributeChangedCallback:(propName:Prop, oldValue:string, newValue:string)=>void,
 	 * adoptedCallback?:()=>void,
@@ -174,7 +174,7 @@ export class CustomTag {
 		this.TNV = validateHtmlTagAttrName(`${tagPrefix}-${tagName}`);
 		let htmlTemplate;
 		/**
-		 * @type {(shadwRoot:ShadowRoot,props_manipulator:(props: Prop) => { value: string; })=>{
+		 * @type {(shadwRoot:ShadowRoot,propsManipulator:(props: Prop) => { value: string; })=>{
 		 * disconnectedCallback:()=>void,
 		 * attributeChangedCallback:(propName:Prop, oldValue:string, newValue:string)=>void,
 		 * adoptedCallback?:()=>void,
@@ -202,16 +202,16 @@ export class CustomTag {
 					const curentScope = spaHelper.currentDocumentScope;
 					spaHelper.currentDocumentScope = this.shadowRoot;
 					({ htmlTemplate, connectedCallback } = lifecycle(
-						(slot_name, additional_attribute) => {
-							let attribute_value = [];
-							for (const attributeName in additional_attribute) {
-								attribute_value.push(
-									`${attributeName}="${additional_attribute[attributeName]}"`
+						(slotName, additionalAttributes) => {
+							let attributeValue = [];
+							for (const attributeName in additionalAttributes) {
+								attributeValue.push(
+									`${attributeName}="${additionalAttributes[attributeName]}"`
 								);
 							}
 							return /* HTML */ `<slot
-								name="${slot_name.toString()}"
-								${attribute_value.join(' ')}
+								name="${slotName.toString()}"
+								${attributeValue.join(' ')}
 							></slot>`;
 						}
 					));
