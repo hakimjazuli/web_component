@@ -6,11 +6,6 @@
 -   we uses `native web component` naming semantics, so if you already familiar with
     `handmade native web component`, you can use that knowledge to develop this library or vice
     versa;
--   this library only provide bare minimum support to create `native web component`, and doesn't
-    provide complex functionality such as `state management`;
-    > -   we, however, have `signal based` >
-    >     [sister library](https://www.npmjs.com/package/@html_first/simple_signal) for
-    >     `state management`
 
 ## how to install
 
@@ -20,8 +15,9 @@ npm i @html_first/web_component
 
 ## classes API
 
--   `CustomTag`;
-
-## sync function API
-
--   `attrHelper`;
+-   `CustomTag`: register tagname;
+-   `Let`: signal based reactivity;
+-   `Derived`: signal based reactivity, wich value are derived from `Let.value`;
+-   `OnViewPort`: viewport observer;
+-   `$`: import `$` from dependency `@html_first/simple_signal`;
+-   for global states consider using `@html_first/simple_signal` classes counterparts;

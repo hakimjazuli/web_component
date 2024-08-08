@@ -32,10 +32,9 @@ const validateHtmlTagAttrName = (string) => {
 const spaHelper = new (class {
 	/**
 	 * attribute index
-	 * @private
 	 * @type {Number}
 	 */
-	AI = 1;
+	AI = 0;
 	attr = '';
 	/**
 	 * attribute index
@@ -43,6 +42,12 @@ const spaHelper = new (class {
 	 */
 	AG = () => {
 		return (this.attr = `atla-as-attr-${this.AI++}`);
+	};
+	/**
+	 * reset attribute index
+	 */
+	RA = () => {
+		this.AI = 0;
 	};
 	/**
 	 * @type {import('@html_first/simple_signal').documentScope}
@@ -191,6 +196,8 @@ export class CustomTag {
 		customElements.define(
 			this.TNV,
 			class extends HTMLElement {
+				curentScope = spaHelper.currentDocumentScope;
+				curentAttrIndex = spaHelper.AI;
 				/**
 				 * @type {ShadowRoot}
 				 */
@@ -199,8 +206,8 @@ export class CustomTag {
 					super();
 					this.shadowRoot = this.attachShadow({ mode: 'open' });
 					const template = document.createElement('template');
-					const curentScope = spaHelper.currentDocumentScope;
 					spaHelper.currentDocumentScope = this.shadowRoot;
+					spaHelper.RA();
 					({ htmlTemplate, connectedCallback } = lifecycle(
 						(slotName, additionalAttributes) => {
 							let attributeValue = [];
@@ -215,7 +222,6 @@ export class CustomTag {
 							></slot>`;
 						}
 					));
-					spaHelper.currentDocumentScope = curentScope;
 					template.innerHTML = htmlTemplate;
 					this.shadowRoot.appendChild(template.content.cloneNode(true));
 				}
@@ -238,6 +244,8 @@ export class CustomTag {
 							},
 						};
 					}));
+					spaHelper.AI = this.curentAttrIndex;
+					spaHelper.currentDocumentScope = this.curentScope;
 					for (const prop in defaultProps) {
 						if (this.hasAttribute(prop)) {
 							this.setAttribute(prop, this.getAttribute(prop) ?? '');
