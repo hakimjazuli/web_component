@@ -116,16 +116,14 @@ export class OnViewPort extends OnViewPort_ {
  */
 export class CustomTag {
 	/**
+	 * create element
 	 * @param {{
 	 * props?:Record.<Prop, string>,
 	 * slots?:Record.<SlotName, HTMLElement|Element>
 	 * }} [options]
-	 * @returns {{
-	 * element:HTMLElement|Element,
-	 * string:string
-	 * }}
+	 * @returns {HTMLElement|Element}
 	 */
-	make = (options) => {
+	element = (options) => {
 		const element = document.createElement(this.TNV);
 		if (options) {
 			const { props, slots } = options;
@@ -138,10 +136,18 @@ export class CustomTag {
 				element.appendChild(childElement);
 			}
 		}
-		return {
-			element,
-			string: element.outerHTML,
-		};
+		return element;
+	};
+	/**
+	 * create string representation of element
+	 * @param {{
+	 * props?:Record.<Prop, string>,
+	 * slots?:Record.<SlotName, HTMLElement|Element>
+	 * }} [options]
+	 * @returns {string}
+	 */
+	string = (options) => {
+		return this.element(options).outerHTML;
 	};
 	/**
 	 * @private
@@ -164,6 +170,8 @@ export class CustomTag {
 	 * @property {string} [tagPrefix]
 	 * @property {Slots} [slots]
 	 * @property {string} [tagName]
+	 * @property {string[]} [globalStyles]
+	 * - absolute path
 	 */
 	/**
 	 * @param {CustomElementParameters} options
@@ -174,6 +182,7 @@ export class CustomTag {
 			lifecycle,
 			tagPrefix = 'hf-wc',
 			tagName = generateTag(),
+			globalStyles,
 			slots,
 		} = options;
 		this.TNV = validateHtmlTagAttrName(`${tagPrefix}-${tagName}`);
@@ -210,18 +219,31 @@ export class CustomTag {
 					spaHelper.RA();
 					({ htmlTemplate, connectedCallback } = lifecycle(
 						(slotName, additionalAttributes) => {
-							let attributeValue = [];
+							let attributesNameValue = [];
 							for (const attributeName in additionalAttributes) {
-								attributeValue.push(
+								attributesNameValue.push(
 									`${attributeName}="${additionalAttributes[attributeName]}"`
 								);
 							}
 							return /* HTML */ `<slot
 								name="${slotName.toString()}"
-								${attributeValue.join(' ')}
+								${attributesNameValue.join(' ')}
 							></slot>`;
 						}
 					));
+					let importStyles = [];
+					if (globalStyles) {
+						for (let i = 0; i < globalStyles.length; i++) {
+							const style = globalStyles[i];
+							importStyles.push(`@import url('${style}');`);
+						}
+						htmlTemplate = /* HTML */ `
+							<style>
+								${importStyles.join('')}
+							</style>
+							${htmlTemplate}
+						`;
+					}
 					template.innerHTML = htmlTemplate;
 					this.shadowRoot.appendChild(template.content.cloneNode(true));
 				}
