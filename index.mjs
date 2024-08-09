@@ -220,15 +220,15 @@ export class CustomTag {
 					({ htmlTemplate, connectedCallback } = lifecycle((slotName) => {
 						return /* HTML */ `<slot name="${slotName.toString()}"></slot>`;
 					}));
-					let importStyles = [];
+					let importStyles_ = [];
 					if (importStyles) {
 						for (let i = 0; i < importStyles.length; i++) {
 							const style = importStyles[i];
-							importStyles.push(`@import url('${style}');`);
+							importStyles_.push(`@import url('${style}');`);
 						}
 						htmlTemplate = /* HTML */ `
 							<style>
-								${importStyles.join('')}
+								${importStyles_.join('')}
 							</style>
 							${htmlTemplate}
 						`;
