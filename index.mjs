@@ -170,7 +170,7 @@ export class CustomTag {
 	 * @property {string} [tagPrefix]
 	 * @property {Slots} [slots]
 	 * @property {string} [tagName]
-	 * @property {string[]} [globalStyles]
+	 * @property {string[]} [importStyles]
 	 * - absolute path
 	 */
 	/**
@@ -182,7 +182,7 @@ export class CustomTag {
 			lifecycle,
 			tagPrefix = 'hf-wc',
 			tagName = generateTag(),
-			globalStyles,
+			importStyles,
 			slots,
 		} = options;
 		this.TNV = validateHtmlTagAttrName(`${tagPrefix}-${tagName}`);
@@ -232,9 +232,9 @@ export class CustomTag {
 						}
 					));
 					let importStyles = [];
-					if (globalStyles) {
-						for (let i = 0; i < globalStyles.length; i++) {
-							const style = globalStyles[i];
+					if (importStyles) {
+						for (let i = 0; i < importStyles.length; i++) {
+							const style = importStyles[i];
 							importStyles.push(`@import url('${style}');`);
 						}
 						htmlTemplate = /* HTML */ `
