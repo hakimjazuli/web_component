@@ -300,3 +300,24 @@ export class CustomTag {
 		);
 	}
 }
+
+export class Render {
+	/**
+	 * render string to element.innerHTML that fit `[${attributeName}]` selector
+	 * @param {string} attributeName
+	 * @param {string} elementString
+	 */
+	constructor(attributeName, elementString) {
+		window.onload = () => {
+			const app = document.body.querySelector(`[${attributeName}]`);
+			if (!app) {
+				console.warn({
+					attributeName,
+					problem: `[${attributeName}] is not exist in document.body`,
+				});
+				return;
+			}
+			app.innerHTML = elementString;
+		};
+	}
+}
