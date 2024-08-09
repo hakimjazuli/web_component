@@ -158,7 +158,7 @@ export class CustomTag {
 	 * @typedef CustomElementParameters
 	 * @property {defaultProps} defaultProps
 	 * @property {(
-	 * createSlot:(slotName:SlotName, additionalAttributes?:Record.<string,string>)=>string,
+	 * createSlot:(slotName:SlotName)=>string,
 	 * )=>{
 	 * htmlTemplate: string,
 	 * connectedCallback:(shadwRoot:ShadowRoot,propsManipulator:(props: Prop) => { value: string; })=>{
@@ -217,20 +217,9 @@ export class CustomTag {
 					const template = document.createElement('template');
 					spaHelper.currentDocumentScope = this.shadowRoot;
 					spaHelper.RA();
-					({ htmlTemplate, connectedCallback } = lifecycle(
-						(slotName, additionalAttributes) => {
-							let attributesNameValue = [];
-							for (const attributeName in additionalAttributes) {
-								attributesNameValue.push(
-									`${attributeName}="${additionalAttributes[attributeName]}"`
-								);
-							}
-							return /* HTML */ `<slot
-								name="${slotName.toString()}"
-								${attributesNameValue.join(' ')}
-							></slot>`;
-						}
-					));
+					({ htmlTemplate, connectedCallback } = lifecycle((slotName) => {
+						return /* HTML */ `<slot name="${slotName.toString()}"></slot>`;
+					}));
 					let importStyles = [];
 					if (importStyles) {
 						for (let i = 0; i < importStyles.length; i++) {
@@ -305,9 +294,9 @@ export class Render {
 	/**
 	 * render string to element.innerHTML that fit `[${attributeName}]` selector
 	 * @param {string} attributeName
-	 * @param {string} elementString
+	 * @param {CustomTag} customTag
 	 */
-	constructor(attributeName, elementString) {
+	constructor(attributeName, customTag) {
 		window.onload = () => {
 			const app = document.body.querySelector(`[${attributeName}]`);
 			if (!app) {
@@ -317,7 +306,7 @@ export class Render {
 				});
 				return;
 			}
-			app.innerHTML = elementString;
+			app.innerHTML = customTag.string();
 		};
 	}
 }
