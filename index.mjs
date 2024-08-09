@@ -160,7 +160,7 @@ export class CustomTag {
 	 * @property {(
 	 * createSlot:(slotName:SlotName)=>string,
 	 * )=>{
-	 * htmlTemplate: string,
+	 * shadowRoot: string,
 	 * connectedCallback:(shadwRoot:ShadowRoot,propsManipulator:(props: Prop) => { value: string; })=>{
 	 * disconnectedCallback:()=>void,
 	 * attributeChangedCallback:(propName:Prop, oldValue:string, newValue:string)=>void,
@@ -217,7 +217,7 @@ export class CustomTag {
 					const template = document.createElement('template');
 					spaHelper.currentDocumentScope = this.shadowRoot;
 					spaHelper.RA();
-					({ htmlTemplate, connectedCallback } = lifecycle((slotName) => {
+					({ shadowRoot: htmlTemplate, connectedCallback } = lifecycle((slotName) => {
 						return /* HTML */ `<slot name="${slotName.toString()}"></slot>`;
 					}));
 					let importStyles_ = [];
