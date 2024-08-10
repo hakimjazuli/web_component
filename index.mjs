@@ -4,6 +4,7 @@ import {
 	Let as Let_,
 	Derived as Derived_,
 	OnViewPort as OnViewPort_,
+	Lifecycle as Lifecycle_,
 } from '@html_first/simple_signal';
 
 let tagIndex = 1;
@@ -102,6 +103,16 @@ export class OnViewPort extends OnViewPort_ {
 	constructor(OnViewCallback, onExitingViewport) {
 		super(spaHelper.AG(), OnViewCallback, onExitingViewport, spaHelper.currentDocumentScope);
 	}
+}
+
+export class Lifecycle extends Lifecycle_ {
+	/**
+	 * @param { (element:HTMLElement|Element, unObserve:()=>void)=>(Promise<()=>Promise<void>>)} lifecycleCallback
+	 */
+	constructor(lifecycleCallback) {
+		super({ [spaHelper.AG()]: lifecycleCallback }, spaHelper.currentDocumentScope);
+	}
+	attr = spaHelper.attr;
 }
 
 /**

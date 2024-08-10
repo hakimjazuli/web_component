@@ -19,5 +19,6 @@ npm i @html_first/web_component
 -   `Let`: signal based reactivity;
 -   `Derived`: signal based reactivity, wich value are derived from `Let.value`;
 -   `OnViewPort`: viewport observer;
+-   `Lifecycle`: lifecycle observer;
 -   `$`: import `$` from dependency `@html_first/simple_signal`;
 -   for global states consider using `@html_first/simple_signal` classes counterparts;
