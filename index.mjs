@@ -104,8 +104,6 @@ export class OnViewPort extends OnViewPort_ {
 	}
 }
 
-const mainStyle = new Let('');
-
 /**
  * @template {{
  * [x: string]: ''
@@ -121,14 +119,15 @@ export class CustomTag {
 	 * create element
 	 * @param {{
 	 * props?:Record.<Prop, string>,
-	 * slots?:Record.<SlotName, HTMLElement|Element>
+	 * slots?:Record.<SlotName, HTMLElement|Element>,
+	 * additionalAttributes?:Record.<string, string>,
 	 * }} [options]
 	 * @returns {HTMLElement|Element}
 	 */
 	element = (options) => {
 		const element = document.createElement(this.TNV);
 		if (options) {
-			const { props, slots } = options;
+			const { props, slots, additionalAttributes } = options;
 			for (const prop in props) {
 				element.setAttribute(prop, props[prop]);
 			}
@@ -136,6 +135,9 @@ export class CustomTag {
 				const childElement = slots[slotName];
 				childElement.setAttribute('slot', slotName);
 				element.appendChild(childElement);
+			}
+			for (const attributeName in additionalAttributes) {
+				element.setAttribute(attributeName, additionalAttributes[attributeName]);
 			}
 		}
 		return element;
