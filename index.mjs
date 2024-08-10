@@ -104,6 +104,8 @@ export class OnViewPort extends OnViewPort_ {
 	}
 }
 
+const mainStyle = new Let('');
+
 /**
  * @template {{
  * [x: string]: ''
@@ -182,7 +184,7 @@ export class CustomTag {
 			lifecycle,
 			tagPrefix = 'hf-wc',
 			tagName = generateTag(),
-			importStyles,
+			importStyles = [],
 			slots,
 		} = options;
 		this.TNV = validateHtmlTagAttrName(`${tagPrefix}-${tagName}`);
@@ -295,8 +297,9 @@ export class Render {
 	 * render string to element.innerHTML that fit `[${attributeName}]` selector
 	 * @param {string} attributeName
 	 * @param {CustomTag} customTag
+	 * @param {string} mainStyleIncludes
 	 */
-	constructor(attributeName, customTag) {
+	constructor(attributeName, customTag, mainStyleIncludes = 'index') {
 		window.onload = () => {
 			const app = document.body.querySelector(`[${attributeName}]`);
 			if (!app) {
