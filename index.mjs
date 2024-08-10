@@ -67,12 +67,6 @@ export class Let extends Let_ {
 		super(value, spaHelper.AG(), spaHelper.currentDocumentScope);
 	}
 	attr = spaHelper.attr;
-	get value() {
-		return super.value;
-	}
-	set value(v) {
-		super.value = v;
-	}
 }
 
 /**
@@ -85,12 +79,6 @@ export class Derived extends Derived_ {
 	 */
 	constructor(asyncCallback) {
 		super(asyncCallback, spaHelper.AG(), spaHelper.currentDocumentScope);
-	}
-	get value() {
-		return super.value;
-	}
-	set value(v) {
-		super.value = v;
 	}
 }
 
