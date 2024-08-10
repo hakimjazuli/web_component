@@ -143,10 +143,11 @@ export class CustomTag {
 		return element;
 	};
 	/**
-	 * create string representation of element
+	 * create element
 	 * @param {{
 	 * props?:Record.<Prop, string>,
-	 * slots?:Record.<SlotName, HTMLElement|Element>
+	 * slots?:Record.<SlotName, HTMLElement|Element>,
+	 * additionalAttributes?:Record.<string, string>,
 	 * }} [options]
 	 * @returns {string}
 	 */
