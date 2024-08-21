@@ -103,6 +103,9 @@ export class Lifecycle extends Lifecycle_ {
 	attr = spaHelper.attr;
 }
 
+// @ts-ignore
+let globalStyle = null;
+
 /**
  * @template {{
  * [x: string]: ''
@@ -224,7 +227,7 @@ export class CustomTag {
 					({ shadowRoot: htmlTemplate, connectedCallback } = lifecycle((slotName) => {
 						return /* HTML */ `<slot name="${slotName.toString()}"></slot>`;
 					}));
-					let importStyles_ = [];
+					let importStyles_ = [globalStyle];
 					if (importStyles) {
 						for (let i = 0; i < importStyles.length; i++) {
 							const style = importStyles[i];
@@ -294,13 +297,98 @@ export class CustomTag {
 	}
 }
 
+export class ForTag extends CustomTag {
+	/**
+	 * @param {ShadowRoot} shadowRoot
+	 * @param {number} n
+	 */
+	trimChild = (shadowRoot, n) => {
+		const children = shadowRoot.children;
+		const excess = children.length - n;
+		if (excess > 0) {
+			for (let i = children.length - 1; i >= n; i--) {
+				shadowRoot.removeChild(children[i]);
+			}
+		}
+	};
+	/**
+	 * @private
+	 * @param {CustomTag} childTag
+	 * @param {{[key:string]:string}[]} data
+	 * @param {ShadowRoot} shadowRoot
+	 * @param {(data:'data') => { value: string; }} propsManipulator
+	 */
+	render = (childTag, data, shadowRoot, propsManipulator) => {
+		const children = shadowRoot.children;
+		const dataLength = data.length;
+		this.trimChild(shadowRoot, dataLength);
+		for (let i = 0; i < data.length; i++) {
+			const child = children[i];
+			const data_ = data[i];
+			if (children[i] && child instanceof HTMLElement) {
+				for (const propName in data_) {
+					child.setAttribute(propName, data_[propName]);
+				}
+				continue;
+			}
+			shadowRoot.appendChild(childTag.element({ props: data[i] }));
+		}
+	};
+	/**
+	 * @typedef ForOptionType
+	 * @property {CustomTag} childTag
+	 * @property {{[key:string]:string}[]} data
+	 * @property {()=>{
+	 * connectedCallback:(shadwRoot:ShadowRoot, propsManipulator:(data:'data') => { value: string; })=>{
+	 * disconnectedCallback:()=>void,
+	 * attributeChangedCallback:(oldValue:string, newValue:string)=>void,
+	 * adoptedCallback?:()=>void,
+	 * },
+	 * }} lifecycle
+	 */
+	/**
+	 *
+	 * @param {ForOptionType} options
+	 */
+	constructor({ childTag, data }) {
+		super({
+			defaultProps: { data },
+			lifecycle: (createSlot) => {
+				return {
+					connectedCallback: (shadowRoot, propsManipulator) => {
+						return {
+							attributeChangedCallback: (p, o, n) => {
+								switch (p) {
+									case 'data':
+										this.render(
+											childTag,
+											JSON.parse(n),
+											shadowRoot,
+											propsManipulator
+										);
+										break;
+								}
+							},
+							disconnectedCallback: () => {},
+						};
+					},
+					shadowRoot: /* HTML */ `<div>${createSlot('child')}</div>`,
+				};
+			},
+		});
+	}
+}
+
 export class Render {
 	/**
 	 * render string to element.innerHTML that fit `[${attributeName}]` selector
 	 * @param {string} attributeName
 	 * @param {CustomTag} customTag
 	 */
-	constructor(attributeName, customTag) {
+	constructor(attributeName, customTag, globalStyle_ = undefined) {
+		if (globalStyle_) {
+			globalStyle = globalStyle_;
+		}
 		window.onload = () => {
 			const app = document.body.querySelector(`[${attributeName}]`);
 			if (!app) {
