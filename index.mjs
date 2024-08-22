@@ -118,6 +118,10 @@ let globalStyle = null;
  */
 export class CustomTag {
 	/**
+	 * @type {string}
+	 */
+	tagName;
+	/**
 	 * create element
 	 * @param {{
 	 * props?:Record.<Prop, string>,
@@ -192,6 +196,7 @@ export class CustomTag {
 			importStyles = [],
 			slots,
 		} = options;
+		this.tagName = tagName;
 		this.TNV = validateHtmlTagAttrName(`${tagPrefix}-${tagName}`);
 		let htmlTemplate;
 		/**
