@@ -377,7 +377,7 @@ export class ForTag extends CustomTag {
 							disconnectedCallback: () => {},
 						};
 					},
-					shadowRoot: /* HTML */ `<div>${createSlot('child')}</div>`,
+					shadowRoot: /* HTML */ ``,
 				};
 			},
 		});
