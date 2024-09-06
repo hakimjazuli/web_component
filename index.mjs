@@ -5,17 +5,14 @@ import {
 	Derived as Derived_,
 	OnViewPort as OnViewPort_,
 	Lifecycle as Lifecycle_,
+	$ as $_,
+	Ping as Ping_,
 } from '@html_first/simple_signal';
 
-let tagIndex = 1;
+let tagIndex = 0;
 
 const generateTag = () => {
-	let tagIndex_ = tagIndex;
-	let remainder = (tagIndex_ - 1) % 26;
-	tagIndex_ = Math.floor((tagIndex_ - 1) / 26);
-	const result = String.fromCharCode(97 + remainder) + '';
-	tagIndex++;
-	return result;
+	return (tagIndex++).toString();
 };
 
 /**
@@ -68,6 +65,9 @@ export class Let extends Let_ {
 	}
 	attr = spaHelper.attr;
 }
+
+export const $ = $_;
+export const Ping = Ping_;
 
 /**
  * @template V
@@ -125,35 +125,35 @@ export class CustomTag {
 	 * create element
 	 * @param {{
 	 * props?:Record.<Prop, string>,
-	 * slots?:Record.<SlotName, HTMLElement|Element>,
-	 * additionalAttributes?:Record.<string, string>,
+	 * slots?:Record.<SlotName, HTMLElement>,
+	 * attributes?:Record.<string, string>,
 	 * }} [options]
-	 * @returns {HTMLElement|Element}
+	 * @returns {HTMLElement}
 	 */
 	element = (options) => {
-		const element = document.createElement(this.TNV);
+		const elem = document.createElement(this.TNV);
 		if (options) {
-			const { props, slots, additionalAttributes } = options;
+			const { props, slots, attributes } = options;
 			for (const prop in props) {
-				element.setAttribute(prop, props[prop]);
+				elem.setAttribute(prop, props[prop]);
 			}
 			for (const slotName in slots) {
-				const childElement = slots[slotName];
-				childElement.setAttribute('slot', slotName);
-				element.appendChild(childElement);
+				const slot = slots[slotName];
+				slot.setAttribute('slot', slotName);
+				elem.append(slot);
 			}
-			for (const attributeName in additionalAttributes) {
-				element.setAttribute(attributeName, additionalAttributes[attributeName]);
+			for (const attributeName in attributes) {
+				elem.setAttribute(attributeName, attributes[attributeName]);
 			}
 		}
-		return element;
+		return elem;
 	};
 	/**
-	 * create element
+	 * create element as string
 	 * @param {{
 	 * props?:Record.<Prop, string>,
-	 * slots?:Record.<SlotName, HTMLElement|Element>,
-	 * additionalAttributes?:Record.<string, string>,
+	 * slots?:Record.<SlotName, HTMLElement>,
+	 * attributes?:Record.<string, string>,
 	 * }} [options]
 	 * @returns {string}
 	 */
@@ -166,17 +166,28 @@ export class CustomTag {
 	 */
 	TNV;
 	/**
+	 * @typedef {()=>void} voidFnType
+	 * @typedef {(propName:Prop, oldValue:string, newValue:string)=>void} attributeChangedCallbackType
+	 * @typedef {(options:{
+	 * shadowRoot:ShadowRoot,
+	 * propsManipulator:(props: Prop) => { value: string },
+	 * })=>(void|{
+	 * disconnectedCallback?:voidFnType,
+	 * attributeChangedCallback?:attributeChangedCallbackType,
+	 * adoptedCallback?:voidFnType,
+	 * })
+	 * } connectedCallbackType
+	 */
+	/**
 	 * @typedef CustomElementParameters
-	 * @property {defaultProps} defaultProps
-	 * @property {(
+	 * @property {defaultProps} [defaultProps]
+	 * @property {(options:{
+	 * reactiveProps: Record.<Prop, Let<string>>,
 	 * createSlot:(slotName:SlotName)=>string,
+	 * }
 	 * )=>{
 	 * shadowRoot: string,
-	 * connectedCallback:(shadwRoot:ShadowRoot,propsManipulator:(props: Prop) => { value: string; })=>{
-	 * disconnectedCallback:()=>void,
-	 * attributeChangedCallback:(propName:Prop, oldValue:string, newValue:string)=>void,
-	 * adoptedCallback?:()=>void,
-	 * },
+	 * connectedCallback?: connectedCallbackType,
 	 * }} lifecycle
 	 * @property {string} [tagPrefix]
 	 * @property {Slots} [slots]
@@ -189,7 +200,7 @@ export class CustomTag {
 	 */
 	constructor(options) {
 		const {
-			defaultProps,
+			defaultProps = {},
 			lifecycle,
 			tagPrefix = 'hf-wc',
 			tagName = generateTag(),
@@ -200,23 +211,37 @@ export class CustomTag {
 		this.TNV = validateHtmlTagAttrName(`${tagPrefix}-${tagName}`);
 		let htmlTemplate;
 		/**
-		 * @type {(shadwRoot:ShadowRoot,propsManipulator:(props: Prop) => { value: string; })=>{
-		 * disconnectedCallback:()=>void,
-		 * attributeChangedCallback:(propName:Prop, oldValue:string, newValue:string)=>void,
-		 * adoptedCallback?:()=>void,
-		 * }}
+		 * @type {connectedCallbackType}
 		 */
 		let connectedCallback;
+		/**
+		 * @type {voidFnType}
+		 */
 		let disconnectedCallback;
+		/**
+		 * @type {attributeChangedCallbackType}
+		 */
 		let attributeChangedCallback;
+		/**
+		 * @type {voidFnType}
+		 */
 		let adoptedCallback;
 		let observedAttributes = [];
 		for (const prop in defaultProps) {
 			observedAttributes.push(prop);
 		}
+		/**
+		 * @type {Record.<Prop, Let<string>>}}
+		 */
+		// @ts-ignore
+		const reactiveProps = {};
 		customElements.define(
 			this.TNV,
 			class extends HTMLElement {
+				/**
+				 * @type {HTMLTemplateElement}
+				 */
+				template;
 				curentScope = spaHelper.currentDocumentScope;
 				curentAttrIndex = spaHelper.AI;
 				/**
@@ -225,57 +250,69 @@ export class CustomTag {
 				shadowRoot;
 				constructor() {
 					super();
-					this.shadowRoot = this.attachShadow({ mode: 'open' });
-					const template = document.createElement('template');
-					spaHelper.currentDocumentScope = this.shadowRoot;
-					spaHelper.RA();
-					({ shadowRoot: htmlTemplate, connectedCallback } = lifecycle((slotName) => {
-						return /* HTML */ `<slot name="${slotName.toString()}"></slot>`;
-					}));
-					let importStyles_ = [globalStyle];
-					if (importStyles) {
-						for (let i = 0; i < importStyles.length; i++) {
-							const style = importStyles[i];
-							importStyles_.push(`@import url('${style}');`);
-						}
-						htmlTemplate = /* HTML */ `
-							<style>
-								${importStyles_.join('')}
-							</style>
-							${htmlTemplate}
-						`;
-					}
-					template.innerHTML = htmlTemplate;
-					this.shadowRoot.appendChild(template.content.cloneNode(true));
 				}
 				static get observedAttributes() {
 					return observedAttributes;
 				}
 				connectedCallback() {
-					({
-						attributeChangedCallback,
-						disconnectedCallback,
-						adoptedCallback = () => {},
-					} = connectedCallback(this.shadowRoot, (propName) => {
-						const this_ = this;
-						return {
-							get value() {
-								return this_.getAttribute(propName.toString()) ?? '';
-							},
-							set value(newValue) {
-								this_.setAttribute(propName.toString(), newValue);
-							},
-						};
-					}));
-					spaHelper.AI = this.curentAttrIndex;
-					spaHelper.currentDocumentScope = this.curentScope;
-					for (const prop in defaultProps) {
-						if (this.hasAttribute(prop)) {
-							this.setAttribute(prop, this.getAttribute(prop) ?? '');
-							continue;
+					new Ping(async () => {
+						this.shadowRoot = this.attachShadow({ mode: 'open' });
+						this.template = document.createElement('template');
+						spaHelper.RA();
+						spaHelper.currentDocumentScope = this.shadowRoot;
+						for (const prop in defaultProps) {
+							reactiveProps[prop.toString()] = new Let('');
 						}
-						this.setAttribute(prop, defaultProps[prop]);
-					}
+						({ shadowRoot: htmlTemplate, connectedCallback = () => {} } = lifecycle({
+							createSlot: (slotName) => {
+								return /* HTML */ `<slot name="${slotName.toString()}"></slot>`;
+							},
+							reactiveProps,
+						}));
+						let importStyles_ = [`@import url(${globalStyle});`];
+						if (importStyles) {
+							for (let i = 0; i < importStyles.length; i++) {
+								const style = importStyles[i];
+								importStyles_.push(`@import url(${style});`);
+							}
+							htmlTemplate = /* HTML */ `<style>
+									${importStyles_.join('')}
+								</style>
+								${htmlTemplate}`;
+						}
+						this.template.innerHTML = htmlTemplate;
+						this.shadowRoot.appendChild(this.template.content.cloneNode(true));
+						const options =
+							connectedCallback({
+								shadowRoot: this.shadowRoot,
+								propsManipulator: (propName) => {
+									const this_ = this;
+									return {
+										get value() {
+											return this_.getAttribute(propName.toString()) ?? '';
+										},
+										set value(newValue) {
+											reactiveProps[propName].value = newValue;
+											this_.setAttribute(propName.toString(), newValue);
+										},
+									};
+								},
+							}) ?? {};
+						({
+							disconnectedCallback = () => {},
+							attributeChangedCallback = () => {},
+							adoptedCallback = () => {},
+						} = options);
+						for (const prop in defaultProps) {
+							if (this.hasAttribute(prop)) {
+								this.setAttribute(prop, this.getAttribute(prop) ?? '');
+								continue;
+							}
+							this.setAttribute(prop, defaultProps[prop]);
+						}
+						spaHelper.AI = this.curentAttrIndex;
+						spaHelper.currentDocumentScope = this.curentScope;
+					});
 				}
 				/**
 				 * @param {Prop} propName
@@ -284,13 +321,20 @@ export class CustomTag {
 				 */
 				attributeChangedCallback(propName, oldValue, newValue) {
 					if (attributeChangedCallback) {
+						reactiveProps[propName].value = newValue;
 						attributeChangedCallback(propName, oldValue, newValue);
 					}
 				}
 				async disconnectedCallback() {
-					if (disconnectedCallback) {
-						disconnectedCallback();
-					}
+					new Ping(async () => {
+						if (disconnectedCallback) {
+							for (const prop in reactiveProps) {
+								reactiveProps[prop].removeAll$();
+								delete reactiveProps[prop];
+							}
+							disconnectedCallback();
+						}
+					});
 				}
 				adoptedCallback() {
 					if (adoptedCallback) {
@@ -302,86 +346,113 @@ export class CustomTag {
 	}
 }
 
-export class ForTag extends CustomTag {
+export class For {
+	attr = spaHelper.AG();
 	/**
-	 * @param {ShadowRoot} shadowRoot
+	 * document scope
+	 * @private
+	 * @type {import('@html_first/simple_signal').documentScope}
+	 */
+	DS;
+	/**
+	 * @param {string|CustomTag} childTag
+	 * - string: valid html tag
+	 * - CustomTag: CustomTag instance;
+	 * @param {Let<{[attributeName:string]:string}[]>} data
+	 */
+	constructor(childTag, data) {
+		if (childTag instanceof CustomTag) {
+			this.CT = childTag.tagName;
+		} else {
+			this.CT = childTag;
+		}
+		this.DS = spaHelper.currentDocumentScope;
+		new $_(async () => {
+			const data_ = data.value;
+			this.R(data_);
+		});
+	}
+	/**
+	 * childTag
+	 * @private
+	 */
+	CT;
+	/**
+	 * trim child
+	 * @private
+	 * @param {HTMLElement|Element|ShadowRoot} targetElement
 	 * @param {number} n
 	 */
-	trimChild = (shadowRoot, n) => {
-		const children = shadowRoot.children;
+	static TC = (targetElement, n) => {
+		const children = targetElement.children;
 		const excess = children.length - n;
 		if (excess > 0) {
 			for (let i = children.length - 1; i >= n; i--) {
-				shadowRoot.removeChild(children[i]);
+				targetElement.removeChild(children[i]);
 			}
 		}
 	};
 	/**
+	 * render
 	 * @private
-	 * @param {CustomTag} childTag
 	 * @param {{[key:string]:string}[]} data
-	 * @param {ShadowRoot} shadowRoot
-	 * @param {(data:'data') => { value: string; }} propsManipulator
 	 */
-	render = (childTag, data, shadowRoot, propsManipulator) => {
-		const children = shadowRoot.children;
+	R = (data) => {
+		const targetElement = this.DS.querySelector(`[${this.attr}]`);
+		if (!targetElement) {
+			return;
+		}
+		let childTag = this.CT;
+		const children = targetElement.childNodes;
 		const dataLength = data.length;
-		this.trimChild(shadowRoot, dataLength);
+		For.TC(targetElement, dataLength);
+		const childElement = document.createElement(childTag);
 		for (let i = 0; i < data.length; i++) {
 			const child = children[i];
 			const data_ = data[i];
-			if (children[i] && child instanceof HTMLElement) {
+			if (child && child instanceof HTMLElement) {
 				for (const propName in data_) {
-					child.setAttribute(propName, data_[propName]);
+					try {
+						if (!(propName in child)) {
+							throw '';
+						}
+						if (child[propName] != data_[propName]) {
+							child[propName] = data_[propName];
+						}
+					} catch (error) {
+						if (data_[propName] != child.getAttribute(propName) ?? '') {
+							child.setAttribute(propName, data_[propName]);
+						}
+					}
 				}
 				continue;
 			}
-			shadowRoot.appendChild(childTag.element({ props: data[i] }));
+			const childElement_ = childElement.cloneNode();
+			if (!(childElement_ instanceof HTMLElement)) {
+				continue;
+			}
+			for (const attributeName in data_) {
+				try {
+					if (!(attributeName in childElement_)) {
+						throw '';
+					}
+					childElement_[attributeName] = data_[attributeName];
+					continue;
+				} catch (error) {
+					if (attributeName == '') {
+						console.warn({
+							childElement: childElement_,
+							attributeName,
+							message: "doesn't have target",
+						});
+						continue;
+					}
+					childElement_.setAttribute(attributeName, data_[attributeName]);
+				}
+			}
+			targetElement.appendChild(childElement_);
 		}
 	};
-	/**
-	 * @typedef ForOptionType
-	 * @property {CustomTag} childTag
-	 * @property {{[key:string]:string}[]} data
-	 * @property {()=>{
-	 * connectedCallback:(shadwRoot:ShadowRoot, propsManipulator:(data:'data') => { value: string; })=>{
-	 * disconnectedCallback:()=>void,
-	 * attributeChangedCallback:(oldValue:string, newValue:string)=>void,
-	 * adoptedCallback?:()=>void,
-	 * },
-	 * }} lifecycle
-	 */
-	/**
-	 *
-	 * @param {ForOptionType} options
-	 */
-	constructor({ childTag, data }) {
-		super({
-			defaultProps: { data },
-			lifecycle: (createSlot) => {
-				return {
-					connectedCallback: (shadowRoot, propsManipulator) => {
-						return {
-							attributeChangedCallback: (p, o, n) => {
-								switch (p) {
-									case 'data':
-										this.render(
-											childTag,
-											JSON.parse(n),
-											shadowRoot,
-											propsManipulator
-										);
-										break;
-								}
-							},
-							disconnectedCallback: () => {},
-						};
-					},
-					shadowRoot: /* HTML */ ``,
-				};
-			},
-		});
-	}
 }
 
 export class Render {
