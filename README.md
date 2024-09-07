@@ -22,12 +22,21 @@ npm i @html_first/web_component
 ## classes API
 
 -   `CustomTag`: register tagname;
--   `For`: handling looped tag;
+-   `Render`: startup spa;
+-   `SimpleElement`: `document.createElement` helper (as well as property and attribute setter) to
+    quickly generate `element` and `outerHTML`;
 -   `Let`: signal based reactivity;
 -   `Derived`: signal based reactivity, wich value are derived from `Let<T>.value`;
 -   `$`: side effect of `Let` / `Derived`;
+-   `If`: handling conditional innerHTML value;
+-   `For`: handling looped tag;
+-   `LetList`: one dimensional json array helper, recomended to be used as signal for `For`;
+    > -   technically using it for `FOR` will uses diffing on each childs on every single run;
+    > -   however it only takes account the only reactive part of the childElement;
+    > -   so it's still kind of `fine grained reactivity`-`ish(?)`;
+    > -   extended from `Let`, therefore you can still modify individual list to not to trigger
+    >     whole diffing childElements;
 -   `OnViewPort`: viewport observer;
 -   `Lifecycle`: lifecycle observer;
--   `QuerySignal`: signal based query parameter;
-    > -   can be used as pseudo router;
+-   `LetURL`: signal based reactivity that reflect to url search param;
 -   `Ping`: trigger based callback integrated to the internal queue handler;

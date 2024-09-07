@@ -36,6 +36,7 @@ const spaHelper = new (class {
 })();
 
 /**
+ * - signal based reactivity;
  * @template V
  */
 export class Let extends Let_ {
@@ -48,10 +49,76 @@ export class Let extends Let_ {
 	attr = spaHelper.attr;
 }
 
+/**
+ * - technically using it for `For` will uses diffing on each childs on every single run;
+ * - however it only takes account the only reactive part of the childElement;
+ * - so it's still `fine grained`-`ish(?)`;
+ * - you can still modify individual list to not to trigger whole diffing;
+ */
+export class LetList extends Let {
+	/**
+	 * @typedef {{[key:string]:string}} ListType
+	 * @typedef {ListType[]} ListArrayType
+	 */
+	/**
+	 *
+	 * @param {ListArrayType} list
+	 */
+	constructor(list) {
+		super(list);
+	}
+	/**
+	 * @param {ListType} newItem
+	 */
+	add(newItem) {
+		this.value = [...this.value, newItem];
+	}
+	/**
+	 * @param {number} indexToRemove
+	 */
+	delete(indexToRemove) {
+		this.value = this.value.filter((_, i) => i !== indexToRemove);
+	}
+	/**
+	 * @param {string} keyName
+	 * @param {string} value
+	 */
+	deleteByKey(keyName, value) {
+		this.value = this.value.filter((item) => item[keyName] !== value);
+	}
+	/**
+	 * @param {number} indexToModify
+	 * @param {ListType} newItem
+	 */
+	modify(indexToModify, newItem) {
+		this.value = this.value.map((item, i) =>
+			i === indexToModify ? { ...item, ...newItem } : item
+		);
+	}
+	/**
+	 * @param {string} keyName
+	 * @param {string} value
+	 * @param {ListType} newItem
+	 */
+	modifyByKey(keyName, value, newItem) {
+		this.value = this.value.map((item) =>
+			item[keyName] === value ? { ...item, ...newItem } : item
+		);
+	}
+}
+
+/**
+ * - side effect of `Let` / `Derived`;
+ */
 export const $ = $_;
+
+/**
+ * - trigger based callback integrated to the internal queue handler;
+ */
 export const Ping = Ping_;
 
 /**
+ * - signal based reactivity, wich value are derived from `Let<T>.value`;
  * @template V
  */
 export class Derived extends Derived_ {
@@ -64,6 +131,9 @@ export class Derived extends Derived_ {
 	}
 }
 
+/**
+ * - viewport observer;
+ */
 export class OnViewPort extends OnViewPort_ {
 	/**
 	 * @param {(element:IntersectionObserverEntry['target'])=>Promise<void>} OnViewCallback
@@ -75,6 +145,9 @@ export class OnViewPort extends OnViewPort_ {
 	}
 }
 
+/**
+ * - lifecycle observer;
+ */
 export class Lifecycle extends Lifecycle_ {
 	/**
 	 * @param { (element:HTMLElement|Element, unObserve:()=>void)=>(Promise<()=>Promise<void>>)} lifecycleCallback
@@ -85,7 +158,10 @@ export class Lifecycle extends Lifecycle_ {
 	attr = spaHelper.attr;
 }
 
-export class QueryRouter {
+/**
+ * - signal based query parameter;
+ */
+class QueryRouter {
 	/**
 	 * @type {QueryRouter}
 	 */
@@ -269,7 +345,7 @@ export class CustomTag {
 			.replace(/^-+|-+$/g, '')
 			.replace(/-+/g, '-');
 	};
-	static globalStyle = null;
+	static globalStyle;
 	/**
 	 * @type {string}
 	 */
@@ -499,6 +575,47 @@ export class CustomTag {
 	}
 }
 
+/**
+ * - document.createElement` helper
+ * - as well as property and attribute setter
+ */
+export class SimpleElement {
+	/**
+	 * @param {string} tagName
+	 * @param {{
+	 * [attrNameNPropName:string]:string
+	 * }} [attributeNProperty]
+	 */
+	constructor(tagName, attributeNProperty = {}) {
+		this.element = document.createElement(tagName);
+		for (const attrNameNPropName in attributeNProperty) {
+			try {
+				if (!(attrNameNPropName in this.element)) {
+					throw '';
+				}
+				if (this.element[attrNameNPropName] != attributeNProperty[attrNameNPropName]) {
+					this.element[attrNameNPropName] = attributeNProperty[attrNameNPropName];
+				}
+			} catch (error) {
+				if (
+					attributeNProperty[attrNameNPropName] !=
+						this.element.getAttribute(attrNameNPropName) ??
+					''
+				) {
+					this.element.setAttribute(
+						attrNameNPropName,
+						attributeNProperty[attrNameNPropName]
+					);
+				}
+			}
+		}
+		this.string = this.element.outerHTML;
+	}
+}
+
+/**
+ * - handling conditional innerHTML value;
+ */
 export class If extends Derived {
 	/**
 	 * use this instance.attr to mark element,
@@ -510,7 +627,9 @@ export class If extends Derived {
 		this.attr = `${this.attr}="innerHTML"`;
 	}
 }
-
+/**
+ * - handling looped tag;
+ */
 export class For {
 	attr = spaHelper.AG();
 	/**
@@ -620,10 +739,14 @@ export class For {
 export class Render {
 	/**
 	 * render string to element.innerHTML that fit `[${attributeName}]` selector
-	 * @param {string} attributeName
-	 * @param {CustomTag} customTag
+	 * @param {{
+	 * attributeName:string,
+	 * rootTag:CustomTag,
+	 * useSPARouter?:boolean,
+	 * globalStyle_?:string,
+	 * }} options
 	 */
-	constructor(attributeName, customTag, globalStyle_ = undefined) {
+	constructor({ attributeName, rootTag, useSPARouter = false, globalStyle_ = undefined }) {
 		if (globalStyle_) {
 			CustomTag.globalStyle = globalStyle_;
 		}
@@ -636,7 +759,10 @@ export class Render {
 				});
 				return;
 			}
-			app.innerHTML = customTag.string();
+			app.innerHTML = rootTag.string();
+			if (useSPARouter) {
+				new QueryRouter();
+			}
 		};
 	}
 }
