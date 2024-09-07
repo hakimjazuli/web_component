@@ -9,24 +9,6 @@ import {
 	Ping as Ping_,
 } from '@html_first/simple_signal';
 
-let tagIndex = 0;
-
-const generateTag = () => {
-	return (tagIndex++).toString();
-};
-
-/**
- * @param {string} string
- * @returns {string}
- */
-const validateHtmlTagAttrName = (string) => {
-	return string
-		.toLowerCase()
-		.replace(/[^a-z0-9]/g, '-')
-		.replace(/^-+|-+$/g, '')
-		.replace(/-+/g, '-');
-};
-
 const spaHelper = new (class {
 	/**
 	 * attribute index
@@ -103,8 +85,153 @@ export class Lifecycle extends Lifecycle_ {
 	attr = spaHelper.attr;
 }
 
-// @ts-ignore
-let globalStyle = null;
+export class QueryRouter {
+	/**
+	 * @type {QueryRouter}
+	 */
+	static __;
+	constructor() {
+		if (QueryRouter.__ instanceof QueryRouter) {
+			return;
+		}
+		QueryRouter.__ = this;
+		window.addEventListener('click', QueryRouter.EC);
+	}
+	/**
+	 * @private
+	 * Handles click events and checks if the click target or its ancestors match specific selectors.
+	 * @param {MouseEvent} event - The click event.
+	 */
+	static EC = (event) => {
+		/** @type {HTMLElement | null} */
+		let targetElement = null;
+		const target = /** @type {HTMLElement | null} */ (event.target);
+		if (target && (target.matches('a') || target.matches('button[type="submit"]'))) {
+			targetElement = target;
+		} else {
+			let currentElement = target;
+			while (currentElement) {
+				if (currentElement instanceof ShadowRoot) {
+					break;
+				}
+				if ('matches' in currentElement) {
+					if (currentElement.matches('a')) {
+						targetElement = currentElement;
+						break;
+					}
+					if (currentElement.matches('button[type="submit"]')) {
+						const form = currentElement.closest('form');
+						if (form) {
+							targetElement = currentElement;
+							break;
+						}
+					}
+				}
+				currentElement = currentElement.parentElement;
+			}
+		}
+		if (!targetElement) {
+			return;
+		}
+		if (targetElement instanceof HTMLAnchorElement) {
+			event.preventDefault();
+			QueryRouter.HU(new URL(targetElement.href ?? ''));
+			return;
+		}
+		if (targetElement instanceof HTMLButtonElement) {
+			event.preventDefault();
+			const form = targetElement.closest('form');
+			if (!form || !form.action) {
+				return;
+			}
+			QueryRouter.HU(new URL(form.action));
+			return;
+		}
+	};
+	/**
+	 * handle url path
+	 * @private
+	 * @param {URL} url
+	 */
+	static HU = (url) => {
+		const queryParams = new URLSearchParams(url.search);
+		for (const [key, value] of queryParams.entries()) {
+			if (key in LetURL.queryList) {
+				LetURL.queryList[key].value = value;
+			}
+		}
+	};
+}
+
+export class LetURL {
+	/**
+	 * @type {{
+	 * [name:string]: Let_<string>
+	 * }}
+	 */
+	static queryList = {};
+	/**
+	 * update query params
+	 * @param {string} paramName
+	 * @param {string} paramValue
+	 */
+	static UQP = (paramName, paramValue) => {
+		const url = new URL(window.location.href);
+		url.searchParams.set(paramName, paramValue);
+		history.pushState(null, '', url.toString());
+	};
+	/**
+	 * query
+	 * @type {Let_<string>}
+	 */
+	query;
+	/**
+	 * @private
+	 * parameter name
+	 * @type {string}
+	 */
+	N;
+	/**
+	 * @private
+	 * query change ping
+	 * @type {Ping_|null}
+	 */
+	P;
+	/**
+	 * @param {{
+	 * name:string,
+	 * value?:string,
+	 * onRouteChangedCallback?:(currentQueryValue:string)=>Promise<void>
+	 * }} options
+	 */
+	constructor({ name, value = undefined, onRouteChangedCallback = async () => {} }) {
+		this.N = name;
+		if (value === undefined) {
+			const url = new URL(window.location.href);
+			value = url.searchParams.get(name) || '';
+		}
+		this.query = new Let_(value);
+		LetURL.queryList[name] = this.query;
+		this.P = new Ping_(async (first) => {
+			if (first) {
+				return;
+			}
+			onRouteChangedCallback(this.query.value);
+		});
+		new $(async () => {
+			const val = this.query.value;
+			LetURL.UQP(name, val);
+			if (this.P) {
+				this.P.ping();
+			}
+		});
+	}
+	unSub = () => {
+		this.query.removeAll$();
+		delete LetURL.queryList[this.N];
+		this.P = null;
+	};
+}
 
 /**
  * @template {{
@@ -117,6 +244,32 @@ let globalStyle = null;
  * @template {keyof NonNullable<defaultProps>} Prop
  */
 export class CustomTag {
+	/**
+	 * tag index
+	 * @private
+	 */
+	static TI = 0;
+	/**
+	 * generate tag
+	 * @private
+	 */
+	static GT = () => {
+		return (CustomTag.TI++).toString();
+	};
+	/**
+	 * @private
+	 * validate html tag attribute name
+	 * @param {string} string
+	 * @returns {string}
+	 */
+	static VT = (string) => {
+		return string
+			.toLowerCase()
+			.replace(/[^a-z0-9]/g, '-')
+			.replace(/^-+|-+$/g, '')
+			.replace(/-+/g, '-');
+	};
+	static globalStyle = null;
 	/**
 	 * @type {string}
 	 */
@@ -203,12 +356,12 @@ export class CustomTag {
 			defaultProps = {},
 			lifecycle,
 			tagPrefix = 'hf-wc',
-			tagName = generateTag(),
+			tagName = CustomTag.GT(),
 			importStyles = [],
 			slots,
 		} = options;
 		this.tagName = tagName;
-		this.TNV = validateHtmlTagAttrName(`${tagPrefix}-${tagName}`);
+		this.TNV = CustomTag.VT(`${tagPrefix}-${tagName}`);
 		let htmlTemplate;
 		/**
 		 * @type {connectedCallbackType}
@@ -269,7 +422,7 @@ export class CustomTag {
 							},
 							reactiveProps,
 						}));
-						let importStyles_ = [`@import url(${globalStyle});`];
+						let importStyles_ = [`@import url(${CustomTag.globalStyle});`];
 						if (importStyles) {
 							for (let i = 0; i < importStyles.length; i++) {
 								const style = importStyles[i];
@@ -346,6 +499,18 @@ export class CustomTag {
 	}
 }
 
+export class If extends Derived {
+	/**
+	 * use this instance.attr to mark element,
+	 * it's innerHTML will addapt to derivedCallback's return;
+	 * @param {()=>Promise<string>} derivedCallback
+	 */
+	constructor(derivedCallback) {
+		super(derivedCallback);
+		this.attr = `${this.attr}="innerHTML"`;
+	}
+}
+
 export class For {
 	attr = spaHelper.AG();
 	/**
@@ -355,17 +520,15 @@ export class For {
 	 */
 	DS;
 	/**
-	 * @param {string|CustomTag} childTag
+	 * use this instance.attr to mark element,
+	 * it will generate looped children;
+	 * @param {HTMLElement} childTag
 	 * - string: valid html tag
 	 * - CustomTag: CustomTag instance;
 	 * @param {Let<{[attributeName:string]:string}[]>} data
 	 */
 	constructor(childTag, data) {
-		if (childTag instanceof CustomTag) {
-			this.CT = childTag.tagName;
-		} else {
-			this.CT = childTag;
-		}
+		this.CE = childTag;
 		this.DS = spaHelper.currentDocumentScope;
 		new $_(async () => {
 			const data_ = data.value;
@@ -373,10 +536,10 @@ export class For {
 		});
 	}
 	/**
-	 * childTag
+	 * child element
 	 * @private
 	 */
-	CT;
+	CE;
 	/**
 	 * trim child
 	 * @private
@@ -402,11 +565,10 @@ export class For {
 		if (!targetElement) {
 			return;
 		}
-		let childTag = this.CT;
+		const childElement = this.CE;
 		const children = targetElement.childNodes;
 		const dataLength = data.length;
 		For.TC(targetElement, dataLength);
-		const childElement = document.createElement(childTag);
 		for (let i = 0; i < data.length; i++) {
 			const child = children[i];
 			const data_ = data[i];
@@ -463,7 +625,7 @@ export class Render {
 	 */
 	constructor(attributeName, customTag, globalStyle_ = undefined) {
 		if (globalStyle_) {
-			globalStyle = globalStyle_;
+			CustomTag.globalStyle = globalStyle_;
 		}
 		window.onload = () => {
 			const app = document.body.querySelector(`[${attributeName}]`);
