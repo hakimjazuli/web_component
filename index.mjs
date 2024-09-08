@@ -50,64 +50,6 @@ export class Let extends Let_ {
 }
 
 /**
- * - technically using it for `For` will uses diffing on each childs on every single run;
- * - however it only takes account the only reactive part of the childElement;
- * - so it's still `fine grained`-`ish(?)`;
- * - you can still modify individual list to not to trigger whole diffing;
- */
-export class LetList extends Let {
-	/**
-	 * @typedef {{[key:string]:string}} ListType
-	 * @typedef {ListType[]} ListArrayType
-	 */
-	/**
-	 *
-	 * @param {ListArrayType} list
-	 */
-	constructor(list) {
-		super(list);
-	}
-	/**
-	 * @param {ListType} newItem
-	 */
-	add(newItem) {
-		this.value = [...this.value, newItem];
-	}
-	/**
-	 * @param {number} indexToRemove
-	 */
-	delete(indexToRemove) {
-		this.value = this.value.filter((_, i) => i !== indexToRemove);
-	}
-	/**
-	 * @param {string} keyName
-	 * @param {string} value
-	 */
-	deleteByKey(keyName, value) {
-		this.value = this.value.filter((item) => item[keyName] !== value);
-	}
-	/**
-	 * @param {number} indexToModify
-	 * @param {ListType} newItem
-	 */
-	modify(indexToModify, newItem) {
-		this.value = this.value.map((item, i) =>
-			i === indexToModify ? { ...item, ...newItem } : item
-		);
-	}
-	/**
-	 * @param {string} keyName
-	 * @param {string} value
-	 * @param {ListType} newItem
-	 */
-	modifyByKey(keyName, value, newItem) {
-		this.value = this.value.map((item) =>
-			item[keyName] === value ? { ...item, ...newItem } : item
-		);
-	}
-}
-
-/**
  * - side effect of `Let` / `Derived`;
  */
 export const $ = $_;
@@ -627,6 +569,65 @@ export class If extends Derived {
 		this.attr = `${this.attr}="innerHTML"`;
 	}
 }
+
+/**
+ * @typedef {{[key:string]:string}} ListType
+ * @typedef {ListType[]} ListArrayType
+ */
+/**
+ * - technically using it for `For` will uses diffing on each childs on every single run;
+ * - however it only takes account the only reactive part of the childElement;
+ * - so it's still `fine grained`-`ish(?)`;
+ * - you can still modify individual list to not to trigger whole diffing;
+ */
+export class LetList extends Let {
+	/**
+	 *
+	 * @param {ListArrayType} list
+	 */
+	constructor(list) {
+		super(list);
+	}
+	/**
+	 * @param {ListType} newItem
+	 */
+	add(newItem) {
+		this.value = [...this.value, newItem];
+	}
+	/**
+	 * @param {number} indexToRemove
+	 */
+	delete(indexToRemove) {
+		this.value = this.value.filter((_, i) => i !== indexToRemove);
+	}
+	/**
+	 * @param {string} keyName
+	 * @param {string} value
+	 */
+	deleteByKey(keyName, value) {
+		this.value = this.value.filter((item) => item[keyName] !== value);
+	}
+	/**
+	 * @param {number} indexToModify
+	 * @param {ListType} newItem
+	 */
+	modify(indexToModify, newItem) {
+		this.value = this.value.map((item, i) =>
+			i === indexToModify ? { ...item, ...newItem } : item
+		);
+	}
+	/**
+	 * @param {string} keyName
+	 * @param {string} value
+	 * @param {ListType} newItem
+	 */
+	modifyByKey(keyName, value, newItem) {
+		this.value = this.value.map((item) =>
+			item[keyName] === value ? { ...item, ...newItem } : item
+		);
+	}
+}
+
 /**
  * - handling looped tag;
  */
@@ -641,13 +642,11 @@ export class For {
 	/**
 	 * use this instance.attr to mark element,
 	 * it will generate looped children;
-	 * @param {HTMLElement} childTag
-	 * - string: valid html tag
-	 * - CustomTag: CustomTag instance;
-	 * @param {Let<{[attributeName:string]:string}[]>} data
+	 * @param {HTMLElement} childElement
+	 * @param {LetList} data
 	 */
-	constructor(childTag, data) {
-		this.CE = childTag;
+	constructor(childElement, data) {
+		this.CE = childElement;
 		this.DS = spaHelper.currentDocumentScope;
 		new $_(async () => {
 			const data_ = data.value;
