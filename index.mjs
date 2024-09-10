@@ -8,40 +8,42 @@ import {
 	Ping as Ping_,
 } from '@html_first/simple_signal';
 
-const spaHelper = new (class {
+class spaHelper {
 	/**
-	 * @type {Number}
+	 * @private
 	 */
-	attributeIndex = 0;
-	attr = '';
+	static generateUniqueString() {
+		const timestamp = Date.now();
+		const randomPart = Math.floor(Math.random() * 1_000_000);
+		return `${timestamp}${randomPart}`;
+	}
+	static attr = '';
 	/**
 	 * @return {string}
 	 */
-	attributeIndexGenerator = () => {
-		return (this.attr = `atla-as-attr-${this.attributeIndex++}`);
-	};
-	resetAttrIndex = () => {
-		this.attributeIndex = 0;
+	static attributeIndexGenerator = () => {
+		return (this.attr = `atla-as-${this.generateUniqueString()}`);
 	};
 	/**
 	 * @type {import('@html_first/simple_signal').documentScope}
 	 */
-	currentDocumentScope = document;
-})();
+	static currentDocumentScope = document;
+}
 
 /**
- * - signal based reactivity;
  * @template V
+ * @extends {Let_<V>}
  */
 export class Let extends Let_ {
 	/**
 	 * @param {V} value
-	 * @param {import('@html_first/simple_signal').documentScope} documentScope
+	 * @param {import('@html_first/simple_signal').documentScope} [documentScope]
 	 */
 	constructor(value, documentScope = spaHelper.currentDocumentScope) {
 		super(value, spaHelper.attributeIndexGenerator(), documentScope);
 		this.documentScope = documentScope;
 	}
+	/** @type {string} */
 	attr = spaHelper.attr;
 }
 
@@ -58,6 +60,7 @@ export const Ping = Ping_;
 /**
  * - signal based reactivity, wich value are derived from `Let<T>.value`;
  * @template V
+ * @extends {Derived_<V>}
  */
 export class Derived extends Derived_ {
 	attr = spaHelper.attr;
@@ -237,6 +240,27 @@ export class LetURL {
 	};
 }
 
+export class query {
+	/**
+	 * @param {{attr:string}} letInstance
+	 * @param {import('@html_first/simple_signal').documentScope} documentScope
+	 */
+	constructor(letInstance, documentScope) {
+		this.element = documentScope.querySelector(`[${letInstance.attr}]`);
+	}
+	/**
+	 * @param {(HTMLElement:HTMLElement)=>void} callback
+	 * @param {boolean} [handleEvenWhenFalsy]
+	 * - true: for checking purposes
+	 */
+	handle = (callback, handleEvenWhenFalsy = false) => {
+		if (this.element instanceof HTMLElement || !handleEvenWhenFalsy) {
+			// @ts-ignore
+			callback(this.element);
+		}
+	};
+}
+
 /**
  * @template {{
  * [x: string]: ''
@@ -270,7 +294,26 @@ export class CustomTag {
 			.replace(/^-+|-+$/g, '')
 			.replace(/-+/g, '-');
 	};
+	/**
+	 * @type {string}
+	 */
 	static globalStyle;
+	/**
+	 * @private
+	 */
+	static callbackHandlerIdentifier = 'atla-as-cb';
+	/**
+	 * @private
+	 * @type {{
+	 * [callbackId:string]:{
+	 * connected:elementCreateConnectedCallbackType,
+	 * attributeChanged?:()=>void,
+	 * adopted?:()=>void,
+	 * disconnected?:void|(()=>void)
+	 * }
+	 * }}
+	 */
+	callbackHandler = {};
 	/**
 	 * @type {string}
 	 */
@@ -280,57 +323,55 @@ export class CustomTag {
 	 * propsManipulator:(props: Prop) => { value: string },
 	 * reactiveProps: Record.<Prop, Let<string>>,
 	 * shadowRoot:ShadowRoot,
-	 * thisElement:HTMLElement,})=>void|(()=>void)
+	 * thisElement:HTMLElement
+	 * })=>void|{
+	 * disconnectedCallback?:()=>void,
+	 * attributeChangedCallback?:()=>void,
+	 * adoptedCallback?:()=>void,
+	 * }
 	 * } elementCreateConnectedCallbackType
 	 */
-	/**
-	 * @private
-	 * @type {elementCreateConnectedCallbackType}
-	 */
-	elementCCB;
-	/**
-	 * @type {voidFnType}
-	 */
-	elementDCB;
 	/**
 	 * @typedef {{
 	 * props?:Record.<Prop, string>,
 	 * slots?:Record.<SlotName, HTMLElement>,
 	 * attributes?:Record.<string, string>,
-	 * connectedCallback?:elementCreateConnectedCallbackType}} elementCreateOptionType
+	 * connectedCallback?:elementCreateConnectedCallbackType,
+	 * }} elementCreateOptionType
 	 * - connectedCallback: use this to add aditional (dis)connected callback
 	 * > - usefull for attaching eventListener and removing it;
 	 */
 	/**
 	 * create element
 	 * @param {elementCreateOptionType} [options]
-	 * @returns {HTMLElement}
+	 * @returns {{element:HTMLElement,string:string,shadowRoot:ShadowRoot,attr:string}}
 	 */
-	element = ({ props, slots, attributes, connectedCallback } = {}) => {
-		const elem = document.createElement(this.validatedTag);
+	tag = ({ props, slots, attributes, connectedCallback } = {}) => {
+		const element = document.createElement(this.validatedTag);
 		for (const prop in props) {
-			elem.setAttribute(prop, props[prop]);
+			element.setAttribute(prop, props[prop]);
 		}
 		for (const slotName in slots) {
 			const slot = slots[slotName];
 			slot.setAttribute('slot', slotName);
-			elem.append(slot);
+			element.append(slot);
 		}
 		for (const attributeName in attributes) {
-			elem.setAttribute(attributeName, attributes[attributeName]);
+			element.setAttribute(attributeName, attributes[attributeName]);
 		}
 		if (connectedCallback) {
-			this.elementCCB = connectedCallback;
+			const attr = spaHelper.attributeIndexGenerator();
+			element.setAttribute(CustomTag.callbackHandlerIdentifier, attr);
+			this.callbackHandler[attr] = {
+				connected: connectedCallback,
+			};
 		}
-		return elem;
-	};
-	/**
-	 * create element as string
-	 * @param {elementCreateOptionType} [options]
-	 * @returns {string}
-	 */
-	string = (options = {}) => {
-		return this.element(options).outerHTML;
+		return {
+			element,
+			string: element.outerHTML,
+			// @ts-ignore
+			shadowRoot: element.shadowRoot,
+		};
 	};
 	/**
 	 * @private
@@ -419,7 +460,6 @@ export class CustomTag {
 				 */
 				template;
 				curentScope = spaHelper.currentDocumentScope;
-				curentAttrIndex = spaHelper.attributeIndex;
 				/**
 				 * @type {Record.<Prop, Let<string>>}
 				 */
@@ -436,81 +476,79 @@ export class CustomTag {
 					return observedAttributes;
 				}
 				connectedCallback() {
-					new Ping(async () => {
-						this.shadowRoot = this.attachShadow({ mode: 'open' });
-						this.template = document.createElement('template');
-						spaHelper.resetAttrIndex();
-						spaHelper.currentDocumentScope = this.shadowRoot;
-						for (const prop in defaultProps) {
-							this.reactiveProps[prop.toString()] = new Let('');
-						}
-						let connectedCallbackOptions = {};
-						({ htmlTemplate, connectedCallback = () => {} } = lifecycle(
-							(connectedCallbackOptions = {
-								/**
-								 * @param {SlotName} slotName
-								 * @returns
-								 */
-								createSlot: (slotName) => {
-									return /* HTML */ `<slot name="${slotName.toString()}"></slot>`;
+					this.shadowRoot = this.attachShadow({ mode: 'open' });
+					this.template = document.createElement('template');
+					spaHelper.currentDocumentScope = this.shadowRoot;
+					for (const prop in defaultProps) {
+						this.reactiveProps[prop.toString()] = new Let('');
+					}
+					const connectedCallbackOptions = {
+						/**
+						 * @param {SlotName} slotName
+						 * @returns
+						 */
+						createSlot: (slotName) => {
+							return /* HTML */ `<slot name="${slotName.toString()}"></slot>`;
+						},
+						reactiveProps: this.reactiveProps,
+						shadowRoot: this.shadowRoot,
+						propsManipulator: (propName) => {
+							const this_ = this;
+							const propName_ = propName.toString();
+							return {
+								get value() {
+									return this_.getAttribute(propName_) ?? '';
 								},
-								reactiveProps: this.reactiveProps,
-								shadowRoot: this.shadowRoot,
-								propsManipulator: (propName) => {
-									const this_ = this;
-									return {
-										get value() {
-											return this_.getAttribute(propName.toString()) ?? '';
-										},
-										set value(newValue) {
-											this.reactiveProps[propName].value = newValue;
-											this_.setAttribute(propName.toString(), newValue);
-										},
-									};
+								set value(newValue) {
+									this.reactiveProps[propName].value = newValue;
+									this_.setAttribute(propName_, newValue);
 								},
-								thisElement: this,
-							})
-						));
-						let importStyles_ = [`@import url(${CustomTag.globalStyle});`];
-						if (importStyles) {
-							for (let i = 0; i < importStyles.length; i++) {
-								const style = importStyles[i];
-								importStyles_.push(`@import url(${style});`);
-							}
-							htmlTemplate = /* HTML */ `<style>
-									${importStyles_.join('')}
-								</style>
-								${htmlTemplate}`;
+							};
+						},
+						thisElement: this,
+					};
+					({ htmlTemplate, connectedCallback = () => {} } =
+						lifecycle(connectedCallbackOptions));
+					let importStyles_ = [`@import url(${CustomTag.globalStyle});`];
+					if (importStyles) {
+						for (let i = 0; i < importStyles.length; i++) {
+							const style = importStyles[i];
+							importStyles_.push(`@import url(${style});`);
 						}
-						this.template.innerHTML = htmlTemplate;
-						this.shadowRoot.appendChild(this.template.content.cloneNode(true));
-						const options = connectedCallback() ?? {};
-						if (thisCustomTag.elementCCB) {
-							const dcb = thisCustomTag.elementCCB(
-								// @ts-ignore
-								connectedCallbackOptions
-							);
-							if (dcb) {
-								thisCustomTag.elementDCB = dcb;
-							}
-							// @ts-ignore
-							thisCustomTag.elementCCB = null;
+						htmlTemplate = /* HTML */ `<style>
+								${importStyles_.join('')}
+							</style>
+							${htmlTemplate}`;
+					}
+					this.template.innerHTML = htmlTemplate;
+					this.shadowRoot.appendChild(this.template.content.cloneNode(true));
+					const options = connectedCallback() ?? {};
+					if (this.hasAttribute(CustomTag.callbackHandlerIdentifier)) {
+						const identifier =
+							this.getAttribute(CustomTag.callbackHandlerIdentifier) ?? '';
+						const CBS = thisCustomTag.callbackHandler[identifier];
+						const options = CBS.connected(connectedCallbackOptions);
+						if (options) {
+							({
+								disconnectedCallback: CBS.disconnected,
+								adoptedCallback: CBS.adopted,
+								attributeChangedCallback: CBS.attributeChanged,
+							} = options);
 						}
-						({
-							disconnectedCallback = () => {},
-							attributeChangedCallback = () => {},
-							adoptedCallback = () => {},
-						} = options);
-						for (const prop in defaultProps) {
-							if (this.hasAttribute(prop)) {
-								this.setAttribute(prop, this.getAttribute(prop) ?? '');
-								continue;
-							}
-							this.setAttribute(prop, defaultProps[prop]);
+					}
+					({
+						disconnectedCallback = () => {},
+						attributeChangedCallback = () => {},
+						adoptedCallback = () => {},
+					} = options);
+					for (const prop in defaultProps) {
+						if (this.hasAttribute(prop)) {
+							this.setAttribute(prop, this.getAttribute(prop) ?? '');
+							continue;
 						}
-						spaHelper.attributeIndex = this.curentAttrIndex;
-						spaHelper.currentDocumentScope = this.curentScope;
-					});
+						this.setAttribute(prop, defaultProps[prop]);
+					}
+					spaHelper.currentDocumentScope = this.curentScope;
 				}
 				/**
 				 * @param {Prop} propName
@@ -518,43 +556,53 @@ export class CustomTag {
 				 * @param {string} newValue
 				 */
 				attributeChangedCallback(propName, oldValue, newValue) {
+					spaHelper.currentDocumentScope = this.shadowRoot;
 					if (attributeChangedCallback) {
-						new Ping(async () => {
-							spaHelper.currentDocumentScope = this.shadowRoot;
-							if (propName in this.reactiveProps) {
-								this.reactiveProps[propName].value = newValue;
-								attributeChangedCallback({ propName, oldValue, newValue });
-							}
-							spaHelper.currentDocumentScope = this.curentScope;
-						});
+						if (propName in this.reactiveProps) {
+							this.reactiveProps[propName].value = newValue;
+							attributeChangedCallback({ propName, oldValue, newValue });
+						}
 					}
+					if (this.hasAttribute(CustomTag.callbackHandlerIdentifier)) {
+						const identifier =
+							this.getAttribute(CustomTag.callbackHandlerIdentifier) ?? '';
+						if (thisCustomTag.callbackHandler[identifier].adopted) {
+							thisCustomTag.callbackHandler[identifier].adopted();
+						}
+					}
+					spaHelper.currentDocumentScope = this.curentScope;
 				}
 				async disconnectedCallback() {
+					spaHelper.currentDocumentScope = this.shadowRoot;
 					if (disconnectedCallback) {
-						new Ping(async () => {
-							spaHelper.currentDocumentScope = this.shadowRoot;
-							for (const prop in this.reactiveProps) {
-								this.reactiveProps[prop].removeAll$();
-								delete this.reactiveProps[prop];
-							}
-							disconnectedCallback();
-							if (thisCustomTag.elementDCB) {
-								thisCustomTag.elementDCB();
-								// @ts-ignore
-								thisCustomTag.elementDCB = null;
-							}
-							spaHelper.currentDocumentScope = this.curentScope;
-						});
+						for (const prop in this.reactiveProps) {
+							this.reactiveProps[prop].removeAll$();
+							delete this.reactiveProps[prop];
+						}
+						disconnectedCallback();
 					}
+					if (this.hasAttribute(CustomTag.callbackHandlerIdentifier)) {
+						const identifier =
+							this.getAttribute(CustomTag.callbackHandlerIdentifier) ?? '';
+						if (thisCustomTag.callbackHandler[identifier].disconnected) {
+							thisCustomTag.callbackHandler[identifier].disconnected();
+						}
+					}
+					spaHelper.currentDocumentScope = this.curentScope;
 				}
 				adoptedCallback() {
+					spaHelper.currentDocumentScope = this.shadowRoot;
 					if (adoptedCallback) {
-						new Ping(async () => {
-							spaHelper.currentDocumentScope = this.shadowRoot;
-							adoptedCallback();
-							spaHelper.currentDocumentScope = this.curentScope;
-						});
+						adoptedCallback();
 					}
+					if (this.hasAttribute(CustomTag.callbackHandlerIdentifier)) {
+						const identifier =
+							this.getAttribute(CustomTag.callbackHandlerIdentifier) ?? '';
+						if (thisCustomTag.callbackHandler[identifier].adopted) {
+							thisCustomTag.callbackHandler[identifier].adopted();
+						}
+					}
+					spaHelper.currentDocumentScope = this.curentScope;
 				}
 			}
 		);
@@ -567,12 +615,13 @@ export class CustomTag {
  */
 export class SimpleElement {
 	/**
-	 * @param {string} tagName
 	 * @param {{
+	 * tagName:string,
+	 * attributeNProperty?: {
 	 * [attrNameNPropName:string]:string
-	 * }} [attributeNProperty]
+	 * }}} options
 	 */
-	constructor(tagName, attributeNProperty = {}) {
+	constructor({ tagName, attributeNProperty = {} }) {
 		this.element = document.createElement(tagName);
 		for (const attrNameNPropName in attributeNProperty) {
 			try {
@@ -599,243 +648,246 @@ export class SimpleElement {
 	}
 }
 
-export class If extends Derived {
-	/**
-	 * Description
-	 * @param {()=>Promise<string>} asyncCallback
-	 */
-	constructor(asyncCallback) {
-		super(asyncCallback);
-		this.attr = `${this.attr}="innerHTML"`;
-	}
-}
-
-export class newIf {
+/**
+ * - handling conditional string as `innerHTML`;
+ *   > -   `WARNING!!!`: you better make sure the data is safe;
+ */
+export class If {
 	/**
 	 * @private
 	 */
-	static ifElementWrapper = new CustomTag({
+	static IfTag = new CustomTag({
 		tagName: 'if',
-		defaultProps: { if: '' },
-		lifecycle: ({ shadowRoot }) => {
+		lifecycle: () => {
 			return {
 				htmlTemplate: '',
-				connectedCallback: () => {
-					return {
-						attributeChangedCallback: ({ propName, newValue }) => {
-							if (propName === 'if') {
-								shadowRoot.innerHTML = newValue;
-							}
-						},
-					};
-				},
 			};
 		},
 	});
 	/**
-	 * @param {Derived<String>} derivedString
-	 * - returns: htmlString for ShadowRoot innerHTML
-	 * @return {HTMLElement}
+	 * @param {()=>Promise<string>} stringLogic
 	 */
-	static element = (derivedString) => {
-		const elem = newIf.ifElementWrapper.element({
-			attributes: {
-				/**
-				 * create new Derived instance just incase
-				 * if the Derived<string> are not scoped to current ShadowRoot;
-				 */
-				[new Derived(async () => {
-					const str = derivedString.value.replace(new RegExp('"', 'g'), "'") ?? '';
-					return str;
-				}).attr]: 'if',
+	static element = (stringLogic) => {
+		return If.IfTag.tag({
+			connectedCallback: ({ shadowRoot }) => {
+				const derivedString = new Derived(stringLogic);
+				new $(async () => {
+					shadowRoot.innerHTML = derivedString.value;
+				});
+				return {
+					disconnectedCallback: () => {
+						derivedString.removeAll$();
+					},
+				};
+			},
+		}).element;
+	};
+	/**
+	 * @param {()=>Promise<string>} stringLogic
+	 */
+	static string = (stringLogic) => {
+		return If.element(stringLogic).outerHTML;
+	};
+}
+
+/**
+ * - handling looped tag
+ * @template {{
+ * [x: string]: ''
+ * }} ListTemplate
+ */
+export class For extends CustomTag {
+	/**
+	 * @typedef {Let<Array<Record<keyof NonNullable<ListTemplate>, Let<string>>>>} derivedListType
+	 */
+	/**
+	 * @param {{
+	 * listTemplate:ListTemplate,
+	 * childElement:HTMLElement,
+	 * data:Let<Array<Record<keyof NonNullable<ListTemplate>, string>>>,
+	 * addParentElement?:HTMLElement|ShadowRoot
+	 * }} options
+	 */
+	constructor({ listTemplate, data, childElement, addParentElement }) {
+		super({
+			lifecycle: ({ shadowRoot }) => {
+				return {
+					htmlTemplate: '',
+					connectedCallback: () => {
+						this.listTemplate = listTemplate;
+						this.shadowRoot = shadowRoot;
+						this.parentElement = shadowRoot;
+						if (addParentElement) {
+							shadowRoot.appendChild(addParentElement);
+							const parent_ = shadowRoot.children[1];
+							if (parent_ instanceof HTMLElement) {
+								this.parentElement = parent_;
+							}
+						}
+						this.data = new Let([]);
+						this.childElement = childElement;
+						const check = new $(async () => {
+							this.overwriteData(data.value);
+						});
+						return {
+							disconnectedCallback: () => {
+								data.remove$(check);
+								this.data.removeAll$();
+							},
+						};
+					},
+				};
 			},
 		});
-		return elem;
-	};
-	/**
-	 * @param {Derived<String>} derivedString
-	 * - returns: htmlString for ShadowRoot innerHTML
-	 * @return {string}
-	 */
-	static string = (derivedString) => {
-		return newIf.element(derivedString).outerHTML;
-	};
-}
-
-/**
- * @typedef {Let<{[key:string]:Let<string>}>} ListType
- * - value: Let with input of
- * > -  HTMLElement attributeName;
- * > -  HTMLElement propertyName;
- * @typedef {ListType[]} ListArrayType
- */
-export class LetList extends Let {
-	/**
-	 *
-	 * @param {ListArrayType} list
-	 */
-	constructor(list) {
-		super(list);
 	}
 	/**
-	 * @param {number} indexA
-	 * @param {number} indexB
+	 * @private
+	 * @type {ShadowRoot}
 	 */
-	swap = (indexA, indexB) => {
-		[this.value[indexA], this.value[indexB]] = [this.value[indexB], this.value[indexA]];
-		const children = Array.from(this.documentScope.children);
-		const nodeA = children[indexA];
-		const nodeB = children[indexB];
-		if (nodeA && nodeB) {
-			this.documentScope.insertBefore(nodeA, nodeB);
-			this.documentScope.insertBefore(nodeB, nodeA.nextSibling || null);
+	shadowRoot;
+	/**
+	 * @private
+	 * @type {ShadowRoot|HTMLElement}
+	 */
+	parentElement;
+	/**
+	 * @type {derivedListType}
+	 */
+	data;
+	/**
+	 * @param {Array<Record<keyof NonNullable<ListTemplate>, string>>} overwriteData
+	 */
+	overwriteData = (overwriteData) => {
+		const realData = this.data.value;
+		for (let i = 0; i < overwriteData.length; i++) {
+			const newData_ = overwriteData[i];
+			const realData_ = realData[i];
+			if (!realData_) {
+				this.addChild(newData_);
+			} else {
+				this.editData(newData_, i);
+			}
 		}
-		this.call$();
-	};
-	/**
-	 * @param {ListType} newItem
-	 */
-	add(newItem) {
-		this.value.push(newItem);
-		this.call$();
-	}
-	/**
-	 * @private
-	 * @param {number} indexToRemove
-	 */
-	deleteIndex = (indexToRemove) => {
-		this.documentScope.children[indexToRemove].remove();
-	};
-	/**
-	 * @param {number} indexToRemove
-	 */
-	deleteByIndex(indexToRemove) {
-		this.value = this.value.filter((_, i) => i !== indexToRemove);
-		this.deleteIndex(indexToRemove);
-	}
-	/**
-	 * @param {string} keyName
-	 * @param {string} value
-	 */
-	deleteByKey(keyName, value) {
-		this.value = this.value.filter((item, indexToRemove) => {
-			if (item[keyName] === value) {
-				this.deleteIndex(indexToRemove);
-				return false;
+		for (let i = overwriteData.length; i < realData.length; i++) {
+			let index = i;
+			if (this.parentElement instanceof ShadowRoot) {
+				index = index + 1;
 			}
-			return true;
-		});
-	}
-	/**
-	 * @param {number} indexToModify
-	 * @param {ListType} newItem
-	 */
-	modifyByIndex(indexToModify, newItem) {
-		this.value = this.value.map((item, i) =>
-			i === indexToModify ? { ...item, ...newItem } : item
-		);
-	}
-	/**
-	 * @param {string} keyName
-	 * @param {string} value
-	 * @param {ListType} newItem
-	 */
-	modifyByKey(keyName, value, newItem) {
-		this.value = this.value.map((item) =>
-			item[keyName] === value ? { ...item, ...newItem } : item
-		);
-	}
-}
-
-/**
- * - handling looped tag;
- */
-export class For {
-	attr = spaHelper.attributeIndexGenerator();
-	/**
-	 * @private
-	 * @type {import('@html_first/simple_signal').documentScope}
-	 */
-	documentScope;
-	/**
-	 * use this instance.attr to mark element,
-	 * it will generate looped children;
-	 * @param {HTMLElement} childElement
-	 * @param {LetList} data
-	 */
-	constructor(childElement, data) {
-		this.childElement = childElement;
-		this.documentScope = spaHelper.currentDocumentScope;
-		new $_(async (first) => {
-			const data_ = data.value;
-			if (first) {
-				return;
-			}
-			this.fineGrainedRender(data_);
-		});
-	}
-	/**
-	 * @private
-	 */
-	childElement;
-	/**
-	 * @private
-	 * @param {HTMLElement|Element|ShadowRoot} targetElement
-	 * @param {number} n
-	 */
-	static trimChildNode = (targetElement, n) => {
-		const children = targetElement.children;
-		const excess = children.length - n;
-		if (excess > 0) {
-			for (let i = children.length - 1; i >= n; i--) {
-				targetElement.removeChild(children[i]);
-			}
+			this.removeChild(index);
 		}
 	};
 	/**
-	 * @private
-	 * @param {ListArrayType} data
+	 * @param {Record<keyof NonNullable<ListTemplate>, string>} newData
+	 * @param {number} index
 	 */
-	fineGrainedRender = (data) => {
-		const targetElement = this.documentScope.querySelector(`[${this.attr}]`);
-		if (!targetElement) {
-			return;
-		}
-		const childElement = this.childElement;
-		const dataLength = data.length;
-		For.trimChildNode(targetElement, dataLength);
-		const children = targetElement.childNodes;
-		for (let i = children.length; i < data.length; i++) {
-			const data__ = data[i].value;
-			const childElement__ = childElement.cloneNode();
-			if (!(childElement__ instanceof HTMLElement)) {
+	editData = (newData, index) => {
+		const thisData = this.data.value[index];
+		for (const attr in newData) {
+			if (!(attr in this.listTemplate)) {
 				continue;
 			}
-			for (const attributeName__ in data__) {
-				childElement__.setAttribute(data__[attributeName__].attr, attributeName__);
+			const thisDataAttr = thisData[attr];
+			if (thisDataAttr.value != newData[attr]) {
+				thisDataAttr.value = newData[attr];
+			}
+		}
+	};
+	/**
+	 * @param {Record<keyof NonNullable<ListTemplate>, string>} newData
+	 */
+	addChild = (newData) => {
+		const generateData = {};
+		const i = this.data.value.length + 1;
+		for (const attr in newData) {
+			if (!(attr in this.listTemplate)) {
+				continue;
+			}
+			const attrString = attr.toString();
+			generateData[attrString] = new Let(newData[attr]);
+			new $(async (first) => {
+				const value = generateData[attrString].value;
+				if (first) {
+					return;
+				}
+				this.data.value[i][attr] = new Let(value);
+			});
+		}
+		// @ts-ignore by pass from data construction
+		this.data.value.push(generateData);
+		// @ts-ignore by pass from data construction
+		const childElement = this.generateChild(generateData);
+		this.parentElement.append(childElement);
+	};
+	/**
+	 * @param {number|NaN|Let<string>} indexOrSignal
+	 */
+	removeChild = (indexOrSignal) => {
+		if (indexOrSignal instanceof Let) {
+			const child = this.shadowRoot.querySelector(`[${indexOrSignal.attr}]`);
+			if (!child || !child.parentElement) {
+				indexOrSignal = NaN;
+			} else {
+				indexOrSignal = Array.prototype.indexOf.call(child.parentElement.children, child);
+			}
+			if (typeof indexOrSignal !== 'number' || Number.isNaN(indexOrSignal)) {
+				return;
+			}
+		}
+		const realdData = this.data;
+		const realData_ = realdData[indexOrSignal];
+		for (const attribute in realData_) {
+			if (!(attribute in this.listTemplate)) {
+				continue;
+			}
+			const tracker = realData_[attribute];
+			if (tracker instanceof Let) {
+				tracker.removeAll$();
+			}
+		}
+		if (this.parentElement instanceof ShadowRoot) {
+			this.parentElement.children[indexOrSignal + 1].remove();
+		} else {
+			this.parentElement.children[indexOrSignal].remove();
+		}
+		realdData.value.splice(indexOrSignal, 1);
+	};
+	/**
+	 * @private
+	 * - not a static method, so `ListTemplate` can be used to typehint;
+	 * @param {Record<keyof NonNullable<ListTemplate>, Let<string>>} data
+	 * @returns {HTMLElement|Node}
+	 */
+	generateChild = (data) => {
+		const childElement_ = this.childElement.cloneNode(true);
+		for (const attributeName in data) {
+			if (!(attributeName in this.listTemplate)) {
+				continue;
+			}
+			const attributeData = data[attributeName];
+			if (childElement_ instanceof HTMLElement) {
+				childElement_.setAttribute(attributeData.attr, attributeName);
+				const attributeName_ = attributeName.toString();
 				try {
-					if (!(attributeName__ in childElement__)) {
+					if (!(attributeName in childElement_)) {
 						throw '';
 					}
-					childElement__[attributeName__] = data__[attributeName__].value;
-					continue;
-				} catch (error) {
-					if (attributeName__ == '') {
-						console.warn({
-							childElement: childElement__,
-							attributeName: attributeName__,
-							message: "doesn't have target",
-						});
-						continue;
+					if (childElement_[attributeName_] != attributeData.value) {
+						childElement_[attributeName_] = attributeData.value;
 					}
-					childElement__.setAttribute(attributeName__, data__[attributeName__].value);
+				} catch (error) {
+					if (attributeData.value != childElement_.getAttribute(attributeName_) ?? '') {
+						childElement_.setAttribute(attributeName_, attributeData.value);
+					}
 				}
 			}
-			targetElement.appendChild(childElement__);
 		}
+		return childElement_;
 	};
 }
 
+/**
+ * Render Helper to `document.body`
+ */
 export class Render {
 	/**
 	 * render string to element.innerHTML that fit `[${attributeName}]` selector
@@ -859,7 +911,7 @@ export class Render {
 				});
 				return;
 			}
-			app.innerHTML = rootTag.string();
+			app.innerHTML = rootTag.tag().string;
 			if (useSPARouter) {
 				new QueryRouter();
 			}

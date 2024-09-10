@@ -27,19 +27,21 @@ npm i @html_first/web_component
 -   `SimpleElement`: `document.createElement` helper (as well as property and attribute setter) to
     quickly generate `element` and `outerHTML`;
 -   `Let`: `signal` based reactivity;
--   `Derived`: `signal` based reactivity, wich value are derived from `Let<T>.value`;
+-   `Derived`: `signal` based reactivity, which value are derived from `Let<T>.value`;
 -   `$`: side effect of `Let` / `Derived`;
-
-    > -   any `signal.value` before returned at `subscribe proccess` will be `subscribed` for
-    >     `effects`
-
--   `If`: handling conditional innerHTML;
--   `For`: handling looped tag;
--   `LetList`: `signal` based reactivity for one dimensional json array
-    helper(`{[key:string]:Let<string>}[]`), recomended to be used for `For`;
+    > -   any `signal.value` before returned at `subscribe proccess/instantiation` will be
+    >     `subscribed` for `effects`
+-   `IfTag`: handling conditional string as `HTML string`;
+    > -   `options`: you can also achieve the same functionality by `${signal.attr}="innerHTML"`,
+    >     this method doesn't create `customTag`;
+    > -   `WARNING!!!`: you better make sure the string data is safe;
+-   `ForTag`: handling looped tag;
+    > -   allowed to insert parent element, usefull for `select` tag and the likes;
+-   `select`: helper to select element of monitored `signal` element;
 -   `OnViewPort`: viewport observer;
 -   `LetURL`: `signal` based reactivity that reflect to url search param;
 -   `Ping`: trigger based callback integrated to the internal queue handler;
+    > -   immediately fired upon instantiation, use `arg0` to return early as needed;
 
 ## Features
 
