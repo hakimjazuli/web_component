@@ -667,8 +667,8 @@ export class If {
 	/**
 	 * @param {()=>Promise<string>} stringLogic
 	 */
-	static element = (stringLogic) => {
-		return If.IfTag.tag({
+	static tag = (stringLogic) => {
+		const elem = If.IfTag.tag({
 			connectedCallback: ({ shadowRoot }) => {
 				const derivedString = new Derived(stringLogic);
 				new $(async () => {
@@ -680,13 +680,8 @@ export class If {
 					},
 				};
 			},
-		}).element;
-	};
-	/**
-	 * @param {()=>Promise<string>} stringLogic
-	 */
-	static string = (stringLogic) => {
-		return If.element(stringLogic).outerHTML;
+		});
+		return elem;
 	};
 }
 

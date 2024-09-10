@@ -31,11 +31,11 @@ npm i @html_first/web_component
 -   `$`: side effect of `Let` / `Derived`;
     > -   any `signal.value` before returned at `subscribe proccess/instantiation` will be
     >     `subscribed` for `effects`
--   `IfTag`: handling conditional string as `HTML string`;
+-   `If`: handling conditional string as `HTML string`;
     > -   `options`: you can also achieve the same functionality by `${signal.attr}="innerHTML"`,
     >     this method doesn't create `customTag`;
     > -   `WARNING!!!`: you better make sure the string data is safe;
--   `ForTag`: handling looped tag;
+-   `For`: handling looped tag;
     > -   allowed to insert parent element, usefull for `select` tag and the likes;
 -   `select`: helper to select element of monitored `signal` element;
 -   `OnViewPort`: viewport observer;
