@@ -7,6 +7,7 @@
 		"url": "git+https://github.com/hakimjazuli/web_component.git"
 	},
 	"main": "index.mjs",
+	"types": "types/index.d.mts",
 	"bugs": {
 		"url": "https://github.com/hakimjazuli/web_component/issues"
 	},
@@ -19,9 +20,14 @@
 	],
 	"license": "MIT",
 	"scripts": {
+		"dev": "concurrently \"bun ./dev/index.mjs\" \"bun gen:type\"",
+		"gen:type": "tsc ./index.mjs --allowJs --declaration --emitDeclarationOnly --outDir ./types --module ESNext --target ES2020 --moduleResolution node --esModuleInterop --skipLibCheck --watch",
 		"test": "echo \"Error: no test specified\" && exit 1"
 	},
 	"dependencies": {
 		"@html_first/simple_signal": "^2.5.1"
+	},
+	"devDependencies": {
+		"@html_first/js_lib_template": "^0.8.2"
 	}
 }

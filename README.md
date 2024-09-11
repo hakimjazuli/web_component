@@ -22,7 +22,7 @@ npm i @html_first/web_component
 
 ## exported classes API
 
--   `CustomTag`: register tagname;
+-   `WebComponent`: register tagname;
 -   `Render`: startup spa;
 -   `SimpleElement`: `document.createElement` helper (as well as property and attribute setter) to
     quickly generate `element` and `outerHTML`;
@@ -33,7 +33,7 @@ npm i @html_first/web_component
     >     `subscribed` for `effects`
 -   `If`: handling conditional string as `HTML string`;
     > -   `options`: you can also achieve the same functionality by `${signal.attr}="innerHTML"`,
-    >     this method doesn't create `customTag`;
+    >     this method doesn't create `WebComponent`;
     > -   `WARNING!!!`: you better make sure the string data is safe;
 -   `For`: handling looped tag;
     > -   allowed to insert parent element, usefull for `select` tag and the likes;
