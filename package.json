@@ -25,7 +25,7 @@
 		"test": "echo \"Error: no test specified\" && exit 1"
 	},
 	"dependencies": {
-		"@html_first/simple_signal": "^2.5.1"
+		"@html_first/simple_signal": "^2.6.0"
 	},
 	"devDependencies": {
 		"@html_first/js_lib_template": "^0.8.2"

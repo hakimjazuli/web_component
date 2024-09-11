@@ -5,7 +5,7 @@ export class Select {
      */
     constructor(letInstance: {
         attr: string;
-    }, documentScope: any);
+    }, documentScope: import("@html_first/simple_signal").documentScope);
     element: any;
     /**
      * @param {(HTMLElement:HTMLElement)=>void} callback

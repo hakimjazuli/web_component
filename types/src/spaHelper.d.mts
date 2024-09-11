@@ -11,5 +11,5 @@ export class spaHelper {
     /**
      * @type {import('@html_first/simple_signal').documentScope}
      */
-    static currentDocumentScope: any;
+    static currentDocumentScope: import("@html_first/simple_signal").documentScope;
 }
