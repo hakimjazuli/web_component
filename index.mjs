@@ -7,7 +7,6 @@
  * developed and published under MIT license,
  * ;;;
  * @description:
- * 
  * ;;;
  */
 
