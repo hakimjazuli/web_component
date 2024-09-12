@@ -39,7 +39,10 @@ export class For extends WebComponent {
 						}
 						this.data = new Let([]);
 						this.childElement = childElement;
-						this.reflectData();
+						new $(async () => {
+							this.data.value;
+							this.reflectData();
+						});
 					},
 				};
 			},
