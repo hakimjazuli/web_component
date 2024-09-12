@@ -267,7 +267,7 @@ export class WebComponent {
 							}
 							this.template.innerHTML = htmlTemplate;
 							this.shadowRoot.appendChild(this.template.content.cloneNode(true));
-							const options = connectedCallback();
+							const options = connectedCallback() ?? {};
 							if (this.hasAttribute(WebComponent.callbackHandlerIdentifier)) {
 								const identifier =
 									this.getAttribute(WebComponent.callbackHandlerIdentifier) ?? '';
