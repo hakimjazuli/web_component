@@ -41,4 +41,4 @@ export class LetURL {
     private queryChangePing;
     unSub: () => void;
 }
-import { Let as Let_ } from '@html_first/simple_signal';
+import { Let as Let_ } from './Let.mjs';

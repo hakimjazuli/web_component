@@ -8,11 +8,11 @@ import { spaHelper } from './spaHelper.mjs';
  * @template {{
  * [x: string]: ''
  * }} Slots
- * @template {keyof NonNullable<Slots>} SlotName
+ * @template {Extract<keyof Slots, string>} SlotName
  * @template {{
  * [x: string]: string
  * }} defaultProps
- * @template {keyof NonNullable<defaultProps>} Prop
+ * @template {Extract<keyof defaultProps, string>} Prop
  */
 export class WebComponent {
 	/**

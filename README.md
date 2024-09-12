@@ -41,6 +41,8 @@ npm i @html_first/web_component
     > -   `WARNING!!!`: you better make sure the string data is safe;
 -   `For`: handling looped tag;
     > -   allowed to insert parent element, usefull for `select` tag and the likes;
+    > -   `thisInstance.tag` can only be called once to assign initial data and to render to
+    >     `WebComponent` scope;
 -   `select`: helper to select element of monitored `signal` element;
 -   `OnViewPort`: viewport observer;
 -   `LetURL`: `signal` based reactivity that reflect to url search param;

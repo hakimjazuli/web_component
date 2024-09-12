@@ -2,17 +2,17 @@
  * @template {{
  * [x: string]: ''
  * }} Slots
- * @template {keyof NonNullable<Slots>} SlotName
+ * @template {Extract<keyof Slots, string>} SlotName
  * @template {{
  * [x: string]: string
  * }} defaultProps
- * @template {keyof NonNullable<defaultProps>} Prop
+ * @template {Extract<keyof defaultProps, string>} Prop
  */
 export class WebComponent<Slots extends {
     [x: string]: "";
-}, SlotName extends keyof NonNullable<Slots>, defaultProps extends {
+}, SlotName extends Extract<keyof Slots, string>, defaultProps extends {
     [x: string]: string;
-}, Prop extends keyof NonNullable<defaultProps>> {
+}, Prop extends Extract<keyof defaultProps, string>> {
     /**
      * @private
      */

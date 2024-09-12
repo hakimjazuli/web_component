@@ -6,7 +6,12 @@
  */
 export class For<ListTemplate extends {
     [x: string]: "";
-}> extends WebComponent<any, any, any, any> {
+}> {
+    static forTag: WebComponent<{
+        [x: string]: "";
+    }, string, {
+        [x: string]: string;
+    }, string>;
     /**
      * @typedef {Let<Array<Record<keyof NonNullable<ListTemplate>, Let<string>>>>} derivedListType
      */
@@ -22,13 +27,16 @@ export class For<ListTemplate extends {
         childElement: HTMLElement;
         addParentElement?: HTMLElement | ShadowRoot;
     });
-    listTemplate: ListTemplate;
-    shadowRoot: ShadowRoot;
     /**
      * @private
-     * @type {ShadowRoot|HTMLElement}
+     * @type {ListTemplate}
      */
-    private parentElement;
+    private listTemplate;
+    /**
+     * @private
+     * @type {HTMLElement|ShadowRoot|undefined}
+     */
+    private addParentElement;
     /**
      * @type {derivedListType}
      */
@@ -36,6 +44,29 @@ export class For<ListTemplate extends {
     childElement: HTMLElement;
     /**
      * @private
+     */
+    private alreadyAssigned;
+    /**
+     * @param {{
+     * assignData:()=>Promise<derivedListType["value"]>
+     * }} options
+     */
+    tag: ({ assignData }: {
+        assignData: () => Promise<Record<keyof NonNullable<ListTemplate>, Let<string>>[]>;
+    }) => {
+        element: HTMLElement;
+        string: string;
+        shadowRoot: ShadowRoot;
+        attr: string;
+    };
+    /**
+     * @private
+     * @type {ShadowRoot|HTMLElement}
+     */
+    private parentElement;
+    /**
+     * @private
+     * @param {derivedListType["value"]} data
      */
     private reflectData;
     /**
@@ -53,5 +84,5 @@ export class For<ListTemplate extends {
      */
     removeChild: (indexOrSignal: number | number | Let<string>) => void;
 }
-import { WebComponent } from './WebComponent.mjs';
 import { Let } from './Let.mjs';
+import { WebComponent } from './WebComponent.mjs';

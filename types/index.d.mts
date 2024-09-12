@@ -10,5 +10,6 @@ import { QueryRouter } from './src/QueryRouter.mjs';
 import { Render } from './src/Render.mjs';
 import { Select } from './src/Select.mjs';
 import { SimpleElement } from './src/SimpleElement.mjs';
+import { Storage } from './src/Storage.mjs';
 import { WebComponent } from './src/WebComponent.mjs';
-export { $, Derived, For, If, Let, LetURL, OnViewPort, Ping, QueryRouter, Render, Select, SimpleElement, WebComponent };
+export { $, Derived, For, If, Let, LetURL, OnViewPort, Ping, QueryRouter, Render, Select, SimpleElement, Storage, WebComponent };

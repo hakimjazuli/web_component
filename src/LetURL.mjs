@@ -1,6 +1,7 @@
 // @ts-check
 
-import { Let as Let_, Ping as Ping_ } from '@html_first/simple_signal';
+import { Let as Let_ } from './Let.mjs';
+import { Ping as Ping_ } from './Ping.mjs';
 import { $ } from '@html_first/simple_signal';
 
 export class LetURL {
