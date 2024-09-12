@@ -11,12 +11,12 @@ export class Render {
 	 * render string to element.innerHTML that fit `#id` selector
 	 * @param {{
 	 * idName:string,
-	 * rootTag:WebComponent,
+	 * rootComponent:WebComponent,
 	 * useSPARouter?:boolean,
 	 * globalStyle_?:string,
 	 * }} options
 	 */
-	constructor({ idName, rootTag, useSPARouter = false, globalStyle_ = undefined }) {
+	constructor({ idName, rootComponent, useSPARouter = false, globalStyle_ = undefined }) {
 		if (globalStyle_) {
 			WebComponent.globalStyle = globalStyle_;
 		}
@@ -29,7 +29,7 @@ export class Render {
 				});
 				return;
 			}
-			app.innerHTML = rootTag.tag().string;
+			app.innerHTML = rootComponent.tag().string;
 			if (useSPARouter) {
 				new QueryRouter();
 			}

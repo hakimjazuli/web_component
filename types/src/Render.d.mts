@@ -6,14 +6,14 @@ export class Render {
      * render string to element.innerHTML that fit `#id` selector
      * @param {{
      * idName:string,
-     * rootTag:WebComponent,
+     * rootComponent:WebComponent,
      * useSPARouter?:boolean,
      * globalStyle_?:string,
      * }} options
      */
-    constructor({ idName, rootTag, useSPARouter, globalStyle_ }: {
+    constructor({ idName, rootComponent, useSPARouter, globalStyle_ }: {
         idName: string;
-        rootTag: WebComponent<any, any, any, any>;
+        rootComponent: WebComponent<any, any, any, any>;
         useSPARouter?: boolean;
         globalStyle_?: string;
     });
