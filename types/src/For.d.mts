@@ -14,22 +14,16 @@ export class For<ListTemplate extends {
      * @param {{
      * listTemplate:ListTemplate,
      * childElement:HTMLElement,
-     * data:Let<Array<Record<keyof NonNullable<ListTemplate>, string>>>,
      * addParentElement?:HTMLElement|ShadowRoot
      * }} options
      */
-    constructor({ listTemplate, data, childElement, addParentElement }: {
+    constructor({ listTemplate, childElement, addParentElement }: {
         listTemplate: ListTemplate;
         childElement: HTMLElement;
-        data: Let<Array<Record<keyof NonNullable<ListTemplate>, string>>>;
         addParentElement?: HTMLElement | ShadowRoot;
     });
     listTemplate: ListTemplate;
-    /**
-     * @private
-     * @type {ShadowRoot}
-     */
-    private shadowRoot;
+    shadowRoot: ShadowRoot;
     /**
      * @private
      * @type {ShadowRoot|HTMLElement}
@@ -41,29 +35,23 @@ export class For<ListTemplate extends {
     data: Let<Record<keyof NonNullable<ListTemplate>, Let<string>>[]>;
     childElement: HTMLElement;
     /**
-     * @param {Array<Record<keyof NonNullable<ListTemplate>, string>>} overwriteData
+     * @private
      */
-    overwriteData: (overwriteData: Array<Record<keyof NonNullable<ListTemplate>, string>>) => void;
+    private reflectData;
     /**
-     * @param {Record<keyof NonNullable<ListTemplate>, string>} newData
+     * - no need to be public, as it can be controlled using instance.data.value[index][attributeOrPropName].value
+     * @private
      * @param {number} index
      */
-    editData: (newData: Record<keyof NonNullable<ListTemplate>, string>, index: number) => void;
+    private reflectDataToDOM;
     /**
-     * @param {Record<keyof NonNullable<ListTemplate>, string>} newData
+     * @param {Record<keyof NonNullable<ListTemplate>, Let<string>>} childData
      */
-    addChild: (newData: Record<keyof NonNullable<ListTemplate>, string>) => void;
+    addChild: (childData: Record<keyof NonNullable<ListTemplate>, Let<string>>) => void;
     /**
      * @param {number|NaN|Let<string>} indexOrSignal
      */
     removeChild: (indexOrSignal: number | number | Let<string>) => void;
-    /**
-     * @private
-     * - not a static method, so `ListTemplate` can be used to typehint;
-     * @param {Record<keyof NonNullable<ListTemplate>, Let<string>>} data
-     * @returns {HTMLElement|Node}
-     */
-    private generateChild;
 }
 import { WebComponent } from './WebComponent.mjs';
 import { Let } from './Let.mjs';

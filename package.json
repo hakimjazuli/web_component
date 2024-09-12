@@ -20,12 +20,11 @@
 	],
 	"license": "MIT",
 	"scripts": {
-		"dev": "concurrently \"bun ./dev/index.mjs\" \"bun gen:type\"",
-		"gen:type": "tsc ./index.mjs --allowJs --declaration --emitDeclarationOnly --outDir ./types --module ESNext --target ES2020 --moduleResolution node --esModuleInterop --skipLibCheck --watch",
+		"dev": "concurrently \"bun ./dev/index.mjs\" \"bun tsc --watch\"",
 		"test": "echo \"Error: no test specified\" && exit 1"
 	},
 	"dependencies": {
-		"@html_first/simple_signal": "^2.6.0"
+		"@html_first/simple_signal": "^2.6.1"
 	},
 	"devDependencies": {
 		"@html_first/js_lib_template": "^0.8.2"

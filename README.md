@@ -28,9 +28,13 @@ npm i @html_first/web_component
     quickly generate `element` and `outerHTML`;
 -   `Let`: `signal` based reactivity;
 -   `Derived`: `signal` based reactivity, which value are derived from `Let<T>.value`;
--   `$`: side effect of `Let` / `Derived`;
+    > -   all `signal` based reactivity are scoped to where it's declared;
+    > -   if it's declared outside `WebComponent` it will not reflect to DOM(suited for global
+    >     `signal` efficiency, since it will not trigger `simple_signal` `setDomReflector`);
+    > -   use `static method` `Ping.scoped(options)` to manually scope when handling `eventListener`
+    >     and the likes;
     > -   any `signal.value` before returned at `subscribe proccess/instantiation` will be
-    >     `subscribed` for `effects`
+    >     `subscribed` for `effects`;
 -   `If`: handling conditional string as `HTML string`;
     > -   `options`: you can also achieve the same functionality by `${signal.attr}="innerHTML"`,
     >     this method doesn't create `WebComponent`;

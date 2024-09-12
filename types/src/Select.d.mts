@@ -6,7 +6,7 @@ export class Select {
     constructor(letInstance: {
         attr: string;
     }, documentScope: import("@html_first/simple_signal").documentScope);
-    element: any;
+    element: Element;
     /**
      * @param {(HTMLElement:HTMLElement)=>void} callback
      * @param {boolean} [handleEvenWhenFalsy]

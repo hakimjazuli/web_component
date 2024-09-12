@@ -25,8 +25,7 @@ export class SimpleElement {
 			} catch (error) {
 				if (
 					attributeNProperty[attrNameNPropName] !=
-						this.element.getAttribute(attrNameNPropName) ??
-					''
+					this.element.getAttribute(attrNameNPropName)
 				) {
 					this.element.setAttribute(
 						attrNameNPropName,

@@ -1,6 +1,7 @@
 // @ts-check
 
 import { Let } from './Let.mjs';
+import { Ping } from './Ping.mjs';
 import { spaHelper } from './spaHelper.mjs';
 
 /**
@@ -202,7 +203,6 @@ export class WebComponent {
 				 * @type {HTMLTemplateElement}
 				 */
 				template;
-				curentScope = spaHelper.currentDocumentScope;
 				/**
 				 * @type {Record.<Prop, Let<string>>}
 				 */
@@ -221,77 +221,82 @@ export class WebComponent {
 				connectedCallback() {
 					this.shadowRoot = this.attachShadow({ mode: 'open' });
 					this.template = document.createElement('template');
-					spaHelper.currentDocumentScope = this.shadowRoot;
-					for (const prop in defaultProps) {
-						this.reactiveProps[prop.toString()] = new Let('');
-					}
-					const connectedCallbackOptions = {
-						/**
-						 * @param {SlotName} slotName
-						 * @returns
-						 */
-						createSlot: (slotName) => {
-							return /* HTML */ `<slot name="${slotName.toString()}"></slot>`;
-						},
-						reactiveProps: this.reactiveProps,
-						shadowRoot: this.shadowRoot,
-						propsManipulator: (propName) => {
-							const this_ = this;
-							const propName_ = propName.toString();
-							return {
-								get value() {
-									return this_.getAttribute(propName_) ?? '';
+					Ping.scoped({
+						documentScope: this.shadowRoot,
+						scopedCallback: async () => {
+							for (const prop in defaultProps) {
+								this.reactiveProps[prop.toString()] = new Let('');
+							}
+							const connectedCallbackOptions = {
+								/**
+								 * @param {SlotName} slotName
+								 * @returns
+								 */
+								createSlot: (slotName) => {
+									return /* HTML */ `<slot name="${slotName.toString()}"></slot>`;
 								},
-								set value(newValue) {
-									this.reactiveProps[propName].value = newValue;
-									this_.setAttribute(propName_, newValue);
+								reactiveProps: this.reactiveProps,
+								shadowRoot: this.shadowRoot,
+								propsManipulator: (propName) => {
+									const this_ = this;
+									const propName_ = propName.toString();
+									return {
+										get value() {
+											return this_.getAttribute(propName_) ?? '';
+										},
+										set value(newValue) {
+											this.reactiveProps[propName].value = newValue;
+											this_.setAttribute(propName_, newValue);
+										},
+									};
 								},
+								thisElement: this,
 							};
+							({ htmlTemplate, connectedCallback = () => {} } =
+								lifecycle(connectedCallbackOptions));
+							let importStyles_ = [`@import url(${WebComponent.globalStyle});`];
+							if (importStyles) {
+								for (let i = 0; i < importStyles.length; i++) {
+									const style = importStyles[i];
+									importStyles_.push(`@import url(${style});`);
+								}
+								htmlTemplate = /* HTML */ `<style>
+										${importStyles_.join('')}
+									</style>
+									${htmlTemplate}`;
+							}
+							this.template.innerHTML = htmlTemplate;
+							this.shadowRoot.appendChild(this.template.content.cloneNode(true));
+							const options = connectedCallback();
+							if (this.hasAttribute(WebComponent.callbackHandlerIdentifier)) {
+								const identifier =
+									this.getAttribute(WebComponent.callbackHandlerIdentifier) ?? '';
+								const CBS = thisCustomTag.callbackHandler[identifier];
+								const options = CBS.connected(connectedCallbackOptions);
+								if (options) {
+									({
+										disconnectedCallback: CBS.disconnected,
+										adoptedCallback: CBS.adopted,
+										attributeChangedCallback: CBS.attributeChanged,
+									} = options);
+								}
+							}
+							if (options) {
+								({
+									disconnectedCallback = () => {},
+									attributeChangedCallback = () => {},
+									adoptedCallback = () => {},
+								} = options);
+							}
+							for (const prop in defaultProps) {
+								if (this.hasAttribute(prop)) {
+									this.setAttribute(prop, this.getAttribute(prop) ?? '');
+									continue;
+								}
+								this.setAttribute(prop, defaultProps[prop]);
+							}
 						},
-						thisElement: this,
-					};
-					({ htmlTemplate, connectedCallback = () => {} } =
-						lifecycle(connectedCallbackOptions));
-					let importStyles_ = [`@import url(${WebComponent.globalStyle});`];
-					if (importStyles) {
-						for (let i = 0; i < importStyles.length; i++) {
-							const style = importStyles[i];
-							importStyles_.push(`@import url(${style});`);
-						}
-						htmlTemplate = /* HTML */ `<style>
-								${importStyles_.join('')}
-							</style>
-							${htmlTemplate}`;
-					}
-					this.template.innerHTML = htmlTemplate;
-					this.shadowRoot.appendChild(this.template.content.cloneNode(true));
-					const options = connectedCallback() ?? {};
-					if (this.hasAttribute(WebComponent.callbackHandlerIdentifier)) {
-						const identifier =
-							this.getAttribute(WebComponent.callbackHandlerIdentifier) ?? '';
-						const CBS = thisCustomTag.callbackHandler[identifier];
-						const options = CBS.connected(connectedCallbackOptions);
-						if (options) {
-							({
-								disconnectedCallback: CBS.disconnected,
-								adoptedCallback: CBS.adopted,
-								attributeChangedCallback: CBS.attributeChanged,
-							} = options);
-						}
-					}
-					({
-						disconnectedCallback = () => {},
-						attributeChangedCallback = () => {},
-						adoptedCallback = () => {},
-					} = options);
-					for (const prop in defaultProps) {
-						if (this.hasAttribute(prop)) {
-							this.setAttribute(prop, this.getAttribute(prop) ?? '');
-							continue;
-						}
-						this.setAttribute(prop, defaultProps[prop]);
-					}
-					spaHelper.currentDocumentScope = this.curentScope;
+					});
 				}
 				/**
 				 * @param {Prop} propName
@@ -299,53 +304,62 @@ export class WebComponent {
 				 * @param {string} newValue
 				 */
 				attributeChangedCallback(propName, oldValue, newValue) {
-					spaHelper.currentDocumentScope = this.shadowRoot;
-					if (attributeChangedCallback) {
-						if (propName in this.reactiveProps) {
-							this.reactiveProps[propName].value = newValue;
-							attributeChangedCallback({ propName, oldValue, newValue });
-						}
-					}
-					if (this.hasAttribute(WebComponent.callbackHandlerIdentifier)) {
-						const identifier =
-							this.getAttribute(WebComponent.callbackHandlerIdentifier) ?? '';
-						if (thisCustomTag.callbackHandler[identifier].adopted) {
-							thisCustomTag.callbackHandler[identifier].adopted();
-						}
-					}
-					spaHelper.currentDocumentScope = this.curentScope;
+					Ping.scoped({
+						documentScope: this.shadowRoot,
+						scopedCallback: async () => {
+							if (attributeChangedCallback) {
+								if (propName in this.reactiveProps) {
+									this.reactiveProps[propName].value = newValue;
+									attributeChangedCallback({ propName, oldValue, newValue });
+								}
+							}
+							if (this.hasAttribute(WebComponent.callbackHandlerIdentifier)) {
+								const identifier =
+									this.getAttribute(WebComponent.callbackHandlerIdentifier) ?? '';
+								if (thisCustomTag.callbackHandler[identifier].adopted) {
+									thisCustomTag.callbackHandler[identifier].adopted();
+								}
+							}
+						},
+					});
 				}
 				async disconnectedCallback() {
-					spaHelper.currentDocumentScope = this.shadowRoot;
-					if (disconnectedCallback) {
-						for (const prop in this.reactiveProps) {
-							this.reactiveProps[prop].removeAll$();
-							delete this.reactiveProps[prop];
-						}
-						disconnectedCallback();
-					}
-					if (this.hasAttribute(WebComponent.callbackHandlerIdentifier)) {
-						const identifier =
-							this.getAttribute(WebComponent.callbackHandlerIdentifier) ?? '';
-						if (thisCustomTag.callbackHandler[identifier].disconnected) {
-							thisCustomTag.callbackHandler[identifier].disconnected();
-						}
-					}
-					spaHelper.currentDocumentScope = this.curentScope;
+					Ping.scoped({
+						documentScope: this.shadowRoot,
+						scopedCallback: async () => {
+							if (disconnectedCallback) {
+								for (const prop in this.reactiveProps) {
+									this.reactiveProps[prop].removeAll$();
+									delete this.reactiveProps[prop];
+								}
+								disconnectedCallback();
+							}
+							if (this.hasAttribute(WebComponent.callbackHandlerIdentifier)) {
+								const identifier =
+									this.getAttribute(WebComponent.callbackHandlerIdentifier) ?? '';
+								if (thisCustomTag.callbackHandler[identifier].disconnected) {
+									thisCustomTag.callbackHandler[identifier].disconnected();
+								}
+							}
+						},
+					});
 				}
 				adoptedCallback() {
-					spaHelper.currentDocumentScope = this.shadowRoot;
-					if (adoptedCallback) {
-						adoptedCallback();
-					}
-					if (this.hasAttribute(WebComponent.callbackHandlerIdentifier)) {
-						const identifier =
-							this.getAttribute(WebComponent.callbackHandlerIdentifier) ?? '';
-						if (thisCustomTag.callbackHandler[identifier].adopted) {
-							thisCustomTag.callbackHandler[identifier].adopted();
-						}
-					}
-					spaHelper.currentDocumentScope = this.curentScope;
+					Ping.scoped({
+						documentScope: this.shadowRoot,
+						scopedCallback: async () => {
+							if (adoptedCallback) {
+								adoptedCallback();
+							}
+							if (this.hasAttribute(WebComponent.callbackHandlerIdentifier)) {
+								const identifier =
+									this.getAttribute(WebComponent.callbackHandlerIdentifier) ?? '';
+								if (thisCustomTag.callbackHandler[identifier].adopted) {
+									thisCustomTag.callbackHandler[identifier].adopted();
+								}
+							}
+						},
+					});
 				}
 			}
 		);

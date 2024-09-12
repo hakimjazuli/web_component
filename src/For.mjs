@@ -18,11 +18,10 @@ export class For extends WebComponent {
 	 * @param {{
 	 * listTemplate:ListTemplate,
 	 * childElement:HTMLElement,
-	 * data:Let<Array<Record<keyof NonNullable<ListTemplate>, string>>>,
 	 * addParentElement?:HTMLElement|ShadowRoot
 	 * }} options
 	 */
-	constructor({ listTemplate, data, childElement, addParentElement }) {
+	constructor({ listTemplate, childElement, addParentElement }) {
 		super({
 			lifecycle: ({ shadowRoot }) => {
 				return {
@@ -40,25 +39,12 @@ export class For extends WebComponent {
 						}
 						this.data = new Let([]);
 						this.childElement = childElement;
-						const check = new $(async () => {
-							this.overwriteData(data.value);
-						});
-						return {
-							disconnectedCallback: () => {
-								data.remove$(check);
-								this.data.removeAll$();
-							},
-						};
+						this.reflectData();
 					},
 				};
 			},
 		});
 	}
-	/**
-	 * @private
-	 * @type {ShadowRoot}
-	 */
-	shadowRoot;
 	/**
 	 * @private
 	 * @type {ShadowRoot|HTMLElement}
@@ -69,75 +55,53 @@ export class For extends WebComponent {
 	 */
 	data;
 	/**
-	 * @param {Array<Record<keyof NonNullable<ListTemplate>, string>>} overwriteData
+	 * @private
 	 */
-	overwriteData = (overwriteData) => {
-		const realData = this.data.value;
-		for (let i = 0; i < overwriteData.length; i++) {
-			const newData_ = overwriteData[i];
-			const realData_ = realData[i];
-			if (!realData_) {
-				this.addChild(newData_);
-			} else {
-				this.editData(newData_, i);
+	reflectData = () => {
+		const data = this.data.value;
+		const childElements = this.parentElement.children;
+		for (let i = 0; i < data.length; i++) {
+			if (!childElements[i]) {
+				this.addChild(data[i]);
+				continue;
 			}
+			this.reflectDataToDOM(i);
 		}
-		for (let i = overwriteData.length; i < realData.length; i++) {
-			let index = i;
-			if (this.parentElement instanceof ShadowRoot) {
-				index = index + 1;
-			}
-			this.removeChild(index);
+		for (let i = data.length; i < childElements.length; i++) {
+			this.removeChild[i];
 		}
 	};
 	/**
-	 * @param {Record<keyof NonNullable<ListTemplate>, string>} newData
+	 * - no need to be public, as it can be controlled using instance.data.value[index][attributeOrPropName].value
+	 * @private
 	 * @param {number} index
 	 */
-	editData = (newData, index) => {
-		const thisData = this.data.value[index];
-		for (const attr in newData) {
-			if (!(attr in this.listTemplate)) {
-				continue;
-			}
-			const thisDataAttr = thisData[attr];
-			if (thisDataAttr.value != newData[attr]) {
-				thisDataAttr.value = newData[attr];
-			}
+	reflectDataToDOM = (index) => {
+		const childData = this.data.value[index];
+		for (const attributeName in childData) {
+			childData[attributeName].call$();
 		}
 	};
 	/**
-	 * @param {Record<keyof NonNullable<ListTemplate>, string>} newData
+	 * @param {Record<keyof NonNullable<ListTemplate>, Let<string>>} childData
 	 */
-	addChild = (newData) => {
-		const generateData = {};
-		const i = this.data.value.length + 1;
-		for (const attr in newData) {
-			if (!(attr in this.listTemplate)) {
-				continue;
-			}
-			const attrString = attr.toString();
-			generateData[attrString] = new Let(newData[attr]);
-			new $(async (first) => {
-				const value = generateData[attrString].value;
-				if (first) {
-					return;
-				}
-				this.data.value[i][attr] = new Let(value);
-			});
+	addChild = (childData) => {
+		const childElement_ = this.childElement.cloneNode(true);
+		if (!(childElement_ instanceof HTMLElement)) {
+			return;
 		}
-		// @ts-ignore by pass from data construction
-		this.data.value.push(generateData);
-		// @ts-ignore by pass from data construction
-		const childElement = this.generateChild(generateData);
-		this.parentElement.append(childElement);
+		for (const attributeName in childData) {
+			childElement_.setAttribute(childData[attributeName].attr, attributeName);
+			childElement_.setAttribute(attributeName, childData[attributeName].value);
+		}
+		this.parentElement.append(childElement_);
 	};
 	/**
 	 * @param {number|NaN|Let<string>} indexOrSignal
 	 */
 	removeChild = (indexOrSignal) => {
 		if (indexOrSignal instanceof Let) {
-			const child = this.shadowRoot.querySelector(`[${indexOrSignal.attr}]`);
+			const child = this.parentElement.querySelector(`[${indexOrSignal.attr}]`);
 			if (!child || !child.parentElement) {
 				indexOrSignal = NaN;
 			} else {
@@ -147,54 +111,15 @@ export class For extends WebComponent {
 				return;
 			}
 		}
-		const realdData = this.data;
-		const realData_ = realdData[indexOrSignal];
-		for (const attribute in realData_) {
-			if (!(attribute in this.listTemplate)) {
-				continue;
-			}
-			const tracker = realData_[attribute];
-			if (tracker instanceof Let) {
-				tracker.removeAll$();
-			}
-		}
-		if (this.parentElement instanceof ShadowRoot) {
-			this.parentElement.children[indexOrSignal + 1].remove();
-		} else {
-			this.parentElement.children[indexOrSignal].remove();
-		}
-		realdData.value.splice(indexOrSignal, 1);
-	};
-	/**
-	 * @private
-	 * - not a static method, so `ListTemplate` can be used to typehint;
-	 * @param {Record<keyof NonNullable<ListTemplate>, Let<string>>} data
-	 * @returns {HTMLElement|Node}
-	 */
-	generateChild = (data) => {
-		const childElement_ = this.childElement.cloneNode(true);
-		for (const attributeName in data) {
+		const child = this.parentElement.children[indexOrSignal];
+		const childData = this.data.value[indexOrSignal];
+		for (const attributeName in childData) {
 			if (!(attributeName in this.listTemplate)) {
 				continue;
 			}
-			const attributeData = data[attributeName];
-			if (childElement_ instanceof HTMLElement) {
-				childElement_.setAttribute(attributeData.attr, attributeName);
-				const attributeName_ = attributeName.toString();
-				try {
-					if (!(attributeName in childElement_)) {
-						throw '';
-					}
-					if (childElement_[attributeName_] != attributeData.value) {
-						childElement_[attributeName_] = attributeData.value;
-					}
-				} catch (error) {
-					if (attributeData.value != childElement_.getAttribute(attributeName_) ?? '') {
-						childElement_.setAttribute(attributeName_, attributeData.value);
-					}
-				}
-			}
+			childData[attributeName].removeAll$;
 		}
-		return childElement_;
+		this.data.value.splice(indexOrSignal, 1);
+		child.remove();
 	};
 }

@@ -8,7 +8,7 @@ export class Let<V> extends Let_<V> {
      * @param {import('@html_first/simple_signal').documentScope} [documentScope]
      */
     constructor(value: V, documentScope?: import("@html_first/simple_signal").documentScope);
-    documentScope: any;
+    documentScope: import("@html_first/simple_signal").documentScope;
     /** @type {string} */
     attr: string;
 }
