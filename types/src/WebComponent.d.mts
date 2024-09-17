@@ -48,7 +48,7 @@ export class WebComponent<Slots extends {
     private static callbackHandlerIdentifier;
     /**
      * @typedef {()=>void} voidFnType
-     * @typedef {(options:{propName:observedAttribute, oldValue:string, newValue:string})=>void} attributeChangedCallbackType
+     * @typedef {(options:{observedAttributeName:observedAttribute, oldValue:string, newValue:string})=>void} attributeChangedCallbackType
      * @typedef {()=>(void|{
      * disconnectedCallback?:voidFnType,
      * attributeChangedCallback?:attributeChangedCallbackType,
@@ -101,7 +101,7 @@ export class WebComponent<Slots extends {
             connectedCallback?: () => (void | {
                 disconnectedCallback?: () => void;
                 attributeChangedCallback?: (options: {
-                    propName: observedAttribute;
+                    observedAttributeName: observedAttribute;
                     oldValue: string;
                     newValue: string;
                 }) => void;
@@ -120,7 +120,7 @@ export class WebComponent<Slots extends {
     /**
      * @typedef {Object} callbackHandlerValue
      * @property {tagOptionCCB} connectedCallback
-     * @property {(options:{propName:string,oldValue:string,newValue:string})=>void} [attributeChangedCallback]
+     * @property {(options:{observedAttributeName:string,oldValue:string,newValue:string})=>void} [attributeChangedCallback]
      * @property {()=>void} [adoptedCallback]
      * @property {void|(()=>void)} [disconnectedCallback]
      */
@@ -134,7 +134,7 @@ export class WebComponent<Slots extends {
     /**
      * @typedef {Object} tagOptionCCBReturns
      * @property {function(): void} [disconnectedCallback] - A callback function invoked when the element is disconnected from the document.
-     * @property {(options:{propName:string,oldValue:string,newValue:string})=> void} [attributeChangedCallback] - A callback function invoked when an attribute of the element is changed.
+     * @property {(options:{observedAttributeName:string,oldValue:string,newValue:string})=> void} [attributeChangedCallback] - A callback function invoked when an attribute of the element is changed.
      * @property {function(): void} [adoptedCallback] - A callback function invoked when the element is adopted into a new document.
      */
     /**
@@ -179,7 +179,7 @@ export class WebComponent<Slots extends {
              * - A callback function invoked when an attribute of the element is changed.
              */
             attributeChangedCallback?: (options: {
-                propName: string;
+                observedAttributeName: string;
                 oldValue: string;
                 newValue: string;
             }) => void;

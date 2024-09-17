@@ -35,7 +35,7 @@ export class App {
                  * - A callback function invoked when an attribute of the element is changed.
                  */
                 attributeChangedCallback?: (options: {
-                    propName: string;
+                    observedAttributeName: string;
                     oldValue: string;
                     newValue: string;
                 }) => void;
