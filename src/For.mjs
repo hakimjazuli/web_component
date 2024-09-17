@@ -26,7 +26,7 @@ import { Let } from './Let.mjs';
  * const index = 0; // modify index0 of the for.data;
  * const dataKey = "value";
  * // const dataKey = "innerHTML"; the key is defined on class instantiation `options.listTemplate`
- * forExample.data[index][dataKey];
+ * forExample.data[index][dataKey].value='test';
  * ```
  */
 /**

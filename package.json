@@ -27,7 +27,6 @@
 		"@html_first/simple_signal": "^2.6.1"
 	},
 	"devDependencies": {
-		"@html_first/js_lib_template": "^1.3.8",
-		"vite": "^5.4.5"
+		"@html_first/js_lib_template": "^1.3.8"
 	}
 }

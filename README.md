@@ -181,7 +181,7 @@ create named storage (`localStorage` or `sessionStorage`) through class instanti
 
 *) <sub>[go to exported list](#exported-api-and-type-list)</sub>
 
-`data and looped component` helper;- create new instance of this class globally to define data list that are to be rendered or might be refenced;```js// @ts-checkimport { For } from "@html_first/web_component"const forExample = new For({options})```- assigning rendered html to `WebComponent````js// in WebComponent scopehtmlTemplate: htmlLiteral`forExample.tag(options).string`;```- modify data```js// in WebComponent scopeconst index = 0; // modify index0 of the for.data;const dataKey = "value";// const dataKey = "innerHTML"; the key is defined on class instantiation `options.listTemplate`forExample.data[index][dataKey];```
+`data and looped component` helper;- create new instance of this class globally to define data list that are to be rendered or might be refenced;```js// @ts-checkimport { For } from "@html_first/web_component"const forExample = new For({options})```- assigning rendered html to `WebComponent````js// in WebComponent scopehtmlTemplate: htmlLiteral`forExample.tag(options).string`;```- modify data```js// in WebComponent scopeconst index = 0; // modify index0 of the for.data;const dataKey = "value";// const dataKey = "innerHTML"; the key is defined on class instantiation `options.listTemplate`forExample.data[index][dataKey].value='test';```
 
 *) <sub>[go to exported list](#exported-api-and-type-list)</sub>
 
