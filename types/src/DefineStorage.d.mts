@@ -1,3 +1,8 @@
+/**
+ * @description
+ * create named storage (`localStorage` or `sessionStorage`) through class instantiation;
+ * - register by putting it in the instantiation of [App](#app)
+ */
 export class DefineStorage {
     /**
      * @type {DefineStorage}

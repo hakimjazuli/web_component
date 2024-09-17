@@ -1,18 +1,29 @@
 /**
+ * @description
+ * it uses `native web component semantics`;
+ * ```js
+ * // declaring
+ * export const Button = new WebComponent(options);
+ * // making html element string
+ * // in WebComponent scope
+ * htmlTemplate: htmlLiteral`${Button.tag(options).string}`
+ * ```
+ */
+/**
  * @template {{
  * [x: string]: ''
  * }} Slots
  * @template {Extract<keyof Slots, string>} SlotName
  * @template {{
  * [x: string]: string
- * }} defaultProps
- * @template {Extract<keyof defaultProps, string>} Prop
+ * }} observedAttributes
+ * @template {Extract<keyof observedAttributes, string>} observedAttribute
  */
 export class WebComponent<Slots extends {
     [x: string]: "";
-}, SlotName extends Extract<keyof Slots, string>, defaultProps extends {
+}, SlotName extends Extract<keyof Slots, string>, observedAttributes extends {
     [x: string]: string;
-}, Prop extends Extract<keyof defaultProps, string>> {
+}, observedAttribute extends Extract<keyof observedAttributes, string>> {
     /**
      * @private
      */
@@ -37,7 +48,7 @@ export class WebComponent<Slots extends {
     private static callbackHandlerIdentifier;
     /**
      * @typedef {()=>void} voidFnType
-     * @typedef {(options:{propName:Prop, oldValue:string, newValue:string})=>void} attributeChangedCallbackType
+     * @typedef {(options:{propName:observedAttribute, oldValue:string, newValue:string})=>void} attributeChangedCallbackType
      * @typedef {()=>(void|{
      * disconnectedCallback?:voidFnType,
      * attributeChangedCallback?:attributeChangedCallbackType,
@@ -47,10 +58,9 @@ export class WebComponent<Slots extends {
      */
     /**
      * @typedef CustomElementParameters
-     * @property {defaultProps} [defaultProps]
+     * @property {observedAttributes} [observedAttributes]
      * @property {(options:{
-     * propsManipulator:(props: Prop) => { value: string },
-     * reactiveProps: Record.<Prop, Let<string>>,
+     * observedAttributesSignal: Record.<observedAttribute, Let<string>>,
      * createSlot:(slotName:SlotName)=>string,
      * shadowRoot:ShadowRoot,
      * thisElement:HTMLElement,
@@ -68,12 +78,13 @@ export class WebComponent<Slots extends {
      * @property {string} [tagName]
      * @property {string[]} [importStyles]
      * - absolute path
+     * @property {typeof HTMLElement} [extendsElement]
      */
     /**
      * @param {CustomElementParameters} options
      */
     constructor(options: {
-        defaultProps?: defaultProps;
+        observedAttributes?: observedAttributes;
         /**
          * use shadowRoot to manually scope `signal` reactivity on:
          * - code that are outside of lifecycle scoped;
@@ -81,10 +92,7 @@ export class WebComponent<Slots extends {
          * - `Ping` scoped asyncCallback;
          */
         lifecycle: (options: {
-            propsManipulator: (props: Prop) => {
-                value: string;
-            };
-            reactiveProps: Record<Prop, Let<string>>;
+            observedAttributesSignal: Record<observedAttribute, Let<string>>;
             createSlot: (slotName: SlotName) => string;
             shadowRoot: ShadowRoot;
             thisElement: HTMLElement;
@@ -93,7 +101,7 @@ export class WebComponent<Slots extends {
             connectedCallback?: () => (void | {
                 disconnectedCallback?: () => void;
                 attributeChangedCallback?: (options: {
-                    propName: Prop;
+                    propName: observedAttribute;
                     oldValue: string;
                     newValue: string;
                 }) => void;
@@ -107,13 +115,14 @@ export class WebComponent<Slots extends {
          * - absolute path
          */
         importStyles?: string[];
+        extendsElement?: typeof HTMLElement;
     });
     /**
      * @typedef {Object} callbackHandlerValue
-     * @property {tagOptionCCB} connected
-     * @property {()=>void} [attributeChanged]
-     * @property {()=>void} [adopted]
-     * @property {void|(()=>void)} [disconnected]
+     * @property {tagOptionCCB} connectedCallback
+     * @property {(options:{propName:string,oldValue:string,newValue:string})=>void} [attributeChangedCallback]
+     * @property {()=>void} [adoptedCallback]
+     * @property {void|(()=>void)} [disconnectedCallback]
      */
     /**
      * @private
@@ -125,13 +134,12 @@ export class WebComponent<Slots extends {
     /**
      * @typedef {Object} tagOptionCCBReturns
      * @property {function(): void} [disconnectedCallback] - A callback function invoked when the element is disconnected from the document.
-     * @property {function(): void} [attributeChangedCallback] - A callback function invoked when an attribute of the element is changed.
+     * @property {(options:{propName:string,oldValue:string,newValue:string})=> void} [attributeChangedCallback] - A callback function invoked when an attribute of the element is changed.
      * @property {function(): void} [adoptedCallback] - A callback function invoked when the element is adopted into a new document.
      */
     /**
      * @typedef {Object} tagOptionCCBArgs
-     * @property {(props: Prop) => { value: string }} propsManipulator
-     * @property {Record<Prop, Let<string>>} reactiveProps
+     * @property {Record<observedAttribute, Let<string>>} observedAttributesSignal
      * @property {ShadowRoot} shadowRoot
      * @property {HTMLElement} thisElement
      */
@@ -148,21 +156,18 @@ export class WebComponent<Slots extends {
     /**
      * create element
      * @param {Object} [options]
-     * @param {Record.<Prop, string>} [options.props]
+     * @param {Record.<observedAttribute, string>} [options.observedAttributes]
      * @param {Record.<SlotName, HTMLElement>} [options.slots]
      * @param {Record.<string, string>} [options.attributes]
      * @param {tagOptionCCB} [options.connectedCallback]
      * @returns {tagReturn}
      */
-    tag: ({ props, slots, attributes, connectedCallback }?: {
-        props?: Record<Prop, string>;
+    tag: ({ observedAttributes, slots, attributes, connectedCallback }?: {
+        observedAttributes?: Record<observedAttribute, string>;
         slots?: Record<SlotName, HTMLElement>;
         attributes?: Record<string, string>;
         connectedCallback?: (options: {
-            propsManipulator: (props: Prop) => {
-                value: string;
-            };
-            reactiveProps: Record<Prop, Let<string>>;
+            observedAttributesSignal: Record<observedAttribute, Let<string>>;
             shadowRoot: ShadowRoot;
             thisElement: HTMLElement;
         }) => void | {
@@ -173,7 +178,11 @@ export class WebComponent<Slots extends {
             /**
              * - A callback function invoked when an attribute of the element is changed.
              */
-            attributeChangedCallback?: () => void;
+            attributeChangedCallback?: (options: {
+                propName: string;
+                oldValue: string;
+                newValue: string;
+            }) => void;
             /**
              * - A callback function invoked when the element is adopted into a new document.
              */

@@ -10,7 +10,7 @@
  * 		const letExample = new Let('test');
  * 		return {
  * 			htmlTemplate: htmlLiteral`<div ${letExample.attr}></div>`,
- * 			connectedCallback: () => {
+ * 			connected: () => {
  * 				new Select(letExample, shadowRoot).handle(...handleArgs);
  * 			},
  * 		};

@@ -22,8 +22,8 @@ import { spaHelper } from './spaHelper.mjs';
  * @template {Extract<keyof Slots, string>} SlotName
  * @template {{
  * [x: string]: string
- * }} defaultProps
- * @template {Extract<keyof defaultProps, string>} Prop
+ * }} observedAttributes
+ * @template {Extract<keyof observedAttributes, string>} observedAttribute
  */
 export class WebComponent {
 	/**
@@ -58,10 +58,10 @@ export class WebComponent {
 	static callbackHandlerIdentifier = 'atla-as-cb';
 	/**
 	 * @typedef {Object} callbackHandlerValue
-	 * @property {tagOptionCCB} connected
-	 * @property {()=>void} [attributeChanged]
-	 * @property {()=>void} [adopted]
-	 * @property {void|(()=>void)} [disconnected]
+	 * @property {tagOptionCCB} connectedCallback
+	 * @property {(options:{propName:string,oldValue:string,newValue:string})=>void} [attributeChangedCallback]
+	 * @property {()=>void} [adoptedCallback]
+	 * @property {void|(()=>void)} [disconnectedCallback]
 	 */
 	/**
 	 * @private
@@ -73,12 +73,12 @@ export class WebComponent {
 	/**
 	 * @typedef {Object} tagOptionCCBReturns
 	 * @property {function(): void} [disconnectedCallback] - A callback function invoked when the element is disconnected from the document.
-	 * @property {function(): void} [attributeChangedCallback] - A callback function invoked when an attribute of the element is changed.
+	 * @property {(options:{propName:string,oldValue:string,newValue:string})=> void} [attributeChangedCallback] - A callback function invoked when an attribute of the element is changed.
 	 * @property {function(): void} [adoptedCallback] - A callback function invoked when the element is adopted into a new document.
 	 */
 	/**
 	 * @typedef {Object} tagOptionCCBArgs
-	 * @property {Record<Prop, Let<string>>} reactiveProps
+	 * @property {Record<observedAttribute, Let<string>>} observedAttributesSignal
 	 * @property {ShadowRoot} shadowRoot
 	 * @property {HTMLElement} thisElement
 	 */
@@ -95,16 +95,16 @@ export class WebComponent {
 	/**
 	 * create element
 	 * @param {Object} [options]
-	 * @param {Record.<Prop, string>} [options.props]
+	 * @param {Record.<observedAttribute, string>} [options.observedAttributes]
 	 * @param {Record.<SlotName, HTMLElement>} [options.slots]
 	 * @param {Record.<string, string>} [options.attributes]
 	 * @param {tagOptionCCB} [options.connectedCallback]
 	 * @returns {tagReturn}
 	 */
-	tag = ({ props, slots, attributes, connectedCallback } = {}) => {
+	tag = ({ observedAttributes, slots, attributes, connectedCallback } = {}) => {
 		const element = document.createElement(this.tagName);
-		for (const prop in props) {
-			element.setAttribute(prop, props[prop]);
+		for (const prop in observedAttributes) {
+			element.setAttribute(prop, observedAttributes[prop]);
 		}
 		for (const slotName in slots) {
 			const slot = slots[slotName];
@@ -118,7 +118,7 @@ export class WebComponent {
 		if (connectedCallback) {
 			element.setAttribute(WebComponent.callbackHandlerIdentifier, attr);
 			this.callbackHandler[attr] = {
-				connected: connectedCallback,
+				connectedCallback: connectedCallback,
 			};
 		}
 		return {
@@ -135,7 +135,7 @@ export class WebComponent {
 	tagName;
 	/**
 	 * @typedef {()=>void} voidFnType
-	 * @typedef {(options:{propName:Prop, oldValue:string, newValue:string})=>void} attributeChangedCallbackType
+	 * @typedef {(options:{propName:observedAttribute, oldValue:string, newValue:string})=>void} attributeChangedCallbackType
 	 * @typedef {()=>(void|{
 	 * disconnectedCallback?:voidFnType,
 	 * attributeChangedCallback?:attributeChangedCallbackType,
@@ -145,9 +145,9 @@ export class WebComponent {
 	 */
 	/**
 	 * @typedef CustomElementParameters
-	 * @property {defaultProps} [defaultProps]
+	 * @property {observedAttributes} [observedAttributes]
 	 * @property {(options:{
-	 * reactiveProps: Record.<Prop, Let<string>>,
+	 * observedAttributesSignal: Record.<observedAttribute, Let<string>>,
 	 * createSlot:(slotName:SlotName)=>string,
 	 * shadowRoot:ShadowRoot,
 	 * thisElement:HTMLElement,
@@ -172,7 +172,7 @@ export class WebComponent {
 	 */
 	constructor(options) {
 		const {
-			defaultProps = {},
+			observedAttributes = {},
 			lifecycle,
 			tagPrefix = 'atla-as-wc',
 			tagName = WebComponent.generateTag(),
@@ -199,9 +199,9 @@ export class WebComponent {
 		 * @type {voidFnType}
 		 */
 		let adoptedCallback;
-		let observedAttributes = [];
-		for (const prop in defaultProps) {
-			observedAttributes.push(prop);
+		let observedAttributes_ = [];
+		for (const prop in observedAttributes) {
+			observedAttributes_.push(prop);
 		}
 		customElements.define(
 			this.tagName,
@@ -211,10 +211,10 @@ export class WebComponent {
 				 */
 				template;
 				/**
-				 * @type {Record.<Prop, Let<string>>}
+				 * @type {Record.<observedAttribute, Let<string>>}
 				 */
 				// @ts-ignore
-				reactiveProps = {};
+				observedAttributesSignal = {};
 				/**
 				 * @type {ShadowRoot}
 				 */
@@ -223,7 +223,7 @@ export class WebComponent {
 					super();
 				}
 				static get observedAttributes() {
-					return observedAttributes;
+					return observedAttributes_;
 				}
 				/**
 				 * @param {string} style
@@ -239,8 +239,8 @@ export class WebComponent {
 						runCheckAtFirst: true,
 						documentScope: this.shadowRoot,
 						scopedCallback: async () => {
-							for (const prop in defaultProps) {
-								this.reactiveProps[prop.toString()] = new Let('');
+							for (const prop in observedAttributes) {
+								this.observedAttributesSignal[prop.toString()] = new Let('');
 							}
 							const connectedCallbackOptions = {
 								/**
@@ -250,7 +250,7 @@ export class WebComponent {
 								createSlot: (slotName) => {
 									return /* HTML */ `<slot name="${slotName.toString()}"></slot>`;
 								},
-								reactiveProps: this.reactiveProps,
+								observedAttributesSignal: this.observedAttributesSignal,
 								shadowRoot: this.shadowRoot,
 								thisElement: this,
 							};
@@ -282,12 +282,12 @@ export class WebComponent {
 								const identifier =
 									this.getAttribute(WebComponent.callbackHandlerIdentifier) ?? '';
 								const CBS = thisCustomTag.callbackHandler[identifier];
-								const options = CBS.connected(connectedCallbackOptions);
+								const options = CBS.connectedCallback(connectedCallbackOptions);
 								if (options) {
 									({
-										disconnectedCallback: CBS.disconnected,
-										adoptedCallback: CBS.adopted,
-										attributeChangedCallback: CBS.attributeChanged,
+										disconnectedCallback: CBS.disconnectedCallback,
+										adoptedCallback: CBS.adoptedCallback,
+										attributeChangedCallback: CBS.attributeChangedCallback,
 									} = options);
 								}
 							}
@@ -298,18 +298,18 @@ export class WebComponent {
 									adoptedCallback = () => {},
 								} = options);
 							}
-							for (const prop in defaultProps) {
+							for (const prop in observedAttributes) {
 								if (this.hasAttribute(prop)) {
 									this.setAttribute(prop, this.getAttribute(prop) ?? '');
 									continue;
 								}
-								this.setAttribute(prop, defaultProps[prop]);
+								this.setAttribute(prop, observedAttributes[prop]);
 							}
 						},
 					});
 				}
 				/**
-				 * @param {Prop} propName
+				 * @param {observedAttribute} propName
 				 * @param {string} oldValue
 				 * @param {string} newValue
 				 */
@@ -319,16 +319,25 @@ export class WebComponent {
 						documentScope: this.shadowRoot,
 						scopedCallback: async () => {
 							if (attributeChangedCallback) {
-								if (propName in this.reactiveProps) {
-									this.reactiveProps[propName].value = newValue;
+								if (propName in this.observedAttributesSignal) {
+									this.observedAttributesSignal[propName].value = newValue;
 									attributeChangedCallback({ propName, oldValue, newValue });
 								}
 							}
 							if (this.hasAttribute(WebComponent.callbackHandlerIdentifier)) {
 								const identifier =
 									this.getAttribute(WebComponent.callbackHandlerIdentifier) ?? '';
-								if (thisCustomTag.callbackHandler[identifier].adopted) {
-									thisCustomTag.callbackHandler[identifier].adopted();
+								if (
+									thisCustomTag.callbackHandler[identifier]
+										.attributeChangedCallback
+								) {
+									thisCustomTag.callbackHandler[
+										identifier
+									].attributeChangedCallback({
+										propName,
+										oldValue,
+										newValue,
+									});
 								}
 							}
 						},
@@ -340,17 +349,21 @@ export class WebComponent {
 						documentScope: this.shadowRoot,
 						scopedCallback: async () => {
 							if (disconnectedCallback) {
-								for (const prop in this.reactiveProps) {
-									this.reactiveProps[prop].removeAll$();
-									delete this.reactiveProps[prop];
+								for (const prop in this.observedAttributesSignal) {
+									this.observedAttributesSignal[prop].removeAll$();
+									delete this.observedAttributesSignal[prop];
 								}
 								disconnectedCallback();
 							}
 							if (this.hasAttribute(WebComponent.callbackHandlerIdentifier)) {
 								const identifier =
 									this.getAttribute(WebComponent.callbackHandlerIdentifier) ?? '';
-								if (thisCustomTag.callbackHandler[identifier].disconnected) {
-									thisCustomTag.callbackHandler[identifier].disconnected();
+								if (
+									thisCustomTag.callbackHandler[identifier].disconnectedCallback
+								) {
+									thisCustomTag.callbackHandler[
+										identifier
+									].disconnectedCallback();
 								}
 							}
 						},
@@ -367,8 +380,8 @@ export class WebComponent {
 							if (this.hasAttribute(WebComponent.callbackHandlerIdentifier)) {
 								const identifier =
 									this.getAttribute(WebComponent.callbackHandlerIdentifier) ?? '';
-								if (thisCustomTag.callbackHandler[identifier].adopted) {
-									thisCustomTag.callbackHandler[identifier].adopted();
+								if (thisCustomTag.callbackHandler[identifier].adoptedCallback) {
+									thisCustomTag.callbackHandler[identifier].adoptedCallback();
 								}
 							}
 						},

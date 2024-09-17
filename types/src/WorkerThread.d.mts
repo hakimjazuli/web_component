@@ -1,3 +1,16 @@
+/**
+ * @description
+ * helper class to define web worker thread;
+ * ```js
+ *	new WorkerThread({
+ *		onMessage: ({ event, postMessage }) => {
+ *			const message = undefined;
+ *			// code to handle the message
+ *			postMessage(message);
+ *		},
+ *	});
+ * ```
+ */
 export class WorkerThread {
     /**
      * @typedef {Object} optionsOnMessage
@@ -15,8 +28,4 @@ export class WorkerThread {
             postMessage: (message: any) => void;
         }) => void;
     });
-    /**
-     * @type {(message: any) => void}
-     */
-    postMessage: (message: any) => void;
 }

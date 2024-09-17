@@ -1,6 +1,14 @@
 /**
+ * @description
  * - handling conditional string as `innerHTML`;
- *   > -   `WARNING!!!`: you better make sure the data is safe;
+ * ```js
+ * htmlTemplate: htmlLiteral`${new If.tag(options).string}`
+ * ```
+ * > - the functionality is the same with using:
+ * ```js
+ * htmlTemplate: htmlLiteral`<div ${derivedIntance.attr}="innerHTML"></div>`
+ * ```
+ * > -   `WARNING!!!`: you better make sure the data is safe;
  */
 export class If {
     /**

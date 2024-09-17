@@ -1,6 +1,10 @@
 /**
+ * @description
  * - document.createElement` helper
  * - as well as property and attribute setter
+ * ```js
+ * const simpleElementExample = new SimpleElement(options);
+ * ```
  */
 export class SimpleElement {
     /**

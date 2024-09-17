@@ -1,4 +1,9 @@
 /**
+ * @description
+ * create shortcut through class instantiation;
+ * - register by putting it in the instantiation of [App](#app)
+ */
+/**
  * @template {{
  * [shortcutName:string]:{
  * action:(key:KeyboardEvent)=>boolean,

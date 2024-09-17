@@ -1,5 +1,31 @@
 /**
- * - signal based reactivity, wich value are derived from `Let<T>.value`;
+ * @description
+ * - `signal` based reactivity, wich value are derived from reacting to [`Let<T>.value`](#let) effects that are called in the `asyncCallback` this class instantiation;
+ * ```js
+ * // @ts-check
+ * // in WebComponent scope
+ * const letSingle = new Let(1);
+ * const doubleExample = new Derived(async()=>{
+ * 	const value = letSingle.value; // autoscubscribed to `letSingle` value changes;
+ * return value * 2; // returned value are to be derivedValue
+ * });
+ * ```
+ * - property `attr`, string helper to identify the `HTML attributeName`
+ * ```js
+ * // in WebComponent scope
+ * // you can use `attr` to bind it to a HTML tag as attribute
+ * htmlTemplate: htmlLiteral`<div ${doubleExample.attr}="innerText"></div>`
+ * ```
+ * - static method `dataOnly`, a behaviour modifier for this class instantiation, to optout from this library built in `setDOMReflector`;
+ * ```js
+ * // in WebComponent scope
+ * const letSingle = new Let(1);
+ * const dataOnlyExample = Derived.dataOnly(async()=>{
+ *  return value * 2;
+ * }) // this instance have undefined `attr` value;
+ * ```
+ */
+/**
  * @template V
  * @extends {Derived_<V>}
  */

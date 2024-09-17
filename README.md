@@ -235,7 +235,7 @@ trigger based callback integrated to the internal library  queue handler;can be
 
 *) <sub>[go to exported list](#exported-api-and-type-list)</sub>
 
-select element based on their binded `signal` attribute```js// in WebComponent scopeconst componentExample = new WebComponent({	lifecycle: ({ shadowRoot }) => {		const letExample = new Let('test');		return {			htmlTemplate: htmlLiteral`<div ${letExample.attr}></div>`,			connectedCallback: () => {				new Select(letExample, shadowRoot).handle(...handleArgs);			},		};	},});```
+select element based on their binded `signal` attribute```js// in WebComponent scopeconst componentExample = new WebComponent({	lifecycle: ({ shadowRoot }) => {		const letExample = new Let('test');		return {			htmlTemplate: htmlLiteral`<div ${letExample.attr}></div>`,			connected: () => {				new Select(letExample, shadowRoot).handle(...handleArgs);			},		};	},});```
 
 *) <sub>[go to exported list](#exported-api-and-type-list)</sub>
 

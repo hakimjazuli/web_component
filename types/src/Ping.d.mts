@@ -1,5 +1,20 @@
 /**
- * - trigger based callback integrated to the internal queue handler;
+ * @description
+ * trigger based callback integrated to the internal library  queue handler;
+ * can be created using:
+ * - class instantiation;
+ * - static method calls (documented internally, just hit ctrl+space and you are good);
+ * standard behaviour:
+ * - asyncCallback will be called upon declaration (except static method `unScopedOnCall`);
+ * - you can opt out by returning early
+ * ```js
+ * const pingExample = new Ping(async(first)=>{ // or static method
+ *		if (first) {
+ *			return;
+ *		}
+ * })
+ * // pingExample.ping(); // to call it later
+ * ```
  */
 export class Ping extends Ping_ {
     /**

@@ -1,3 +1,11 @@
+/**
+ * @description
+ * helper class for registering and postMessage to webWorker
+ * ```js
+ * const worker = new WorkerMainThread(options);
+ * worker.postMessage(message);
+ * ```
+ */
 export class WorkerMainThread {
     /**
      * Initializes a Web Worker from a script path and sets up message handlers.

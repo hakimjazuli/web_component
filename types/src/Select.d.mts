@@ -1,3 +1,21 @@
+/**
+ * @description
+ * select element based on their binded `signal` attribute
+ * ```js
+ * // in WebComponent scope
+ * const componentExample = new WebComponent({
+ * 	lifecycle: ({ shadowRoot }) => {
+ * 		const letExample = new Let('test');
+ * 		return {
+ * 			htmlTemplate: htmlLiteral`<div ${letExample.attr}></div>`,
+ * 			connected: () => {
+ * 				new Select(letExample, shadowRoot).handle(...handleArgs);
+ * 			},
+ * 		};
+ * 	},
+ * });
+ * ```
+ */
 export class Select {
     /**
      * @param {{attr:string}} letInstance

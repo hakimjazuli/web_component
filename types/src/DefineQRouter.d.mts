@@ -1,4 +1,9 @@
 /**
+ * @description
+ * allow the usage of search query based router through class instantiation;
+ * - register by putting it in the instantiation of [App](#app)
+ */
+/**
  * Search-Query-Param Router
  * @template {{
  * [queryName:string]:
