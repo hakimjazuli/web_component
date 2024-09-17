@@ -1,12 +1,8 @@
 // @ts-check
 
-import { Let } from './Let.mjs';
-import { htmlLiteral } from './htmlLiteral.export.mjs';
-import { WebComponent } from './WebComponent.mjs';
-
 /**
  * @description
- * select element based on their `attributeName`
+ * select element based on their binded `signal` attribute
  * ```js
  * // in WebComponent scope
  * const componentExample = new WebComponent({
