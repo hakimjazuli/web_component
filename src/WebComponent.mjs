@@ -5,6 +5,17 @@ import { Ping } from './Ping.mjs';
 import { spaHelper } from './spaHelper.mjs';
 
 /**
+ * @description
+ * it uses `native web component semantics`;
+ * ```js
+ * // declaring
+ * export const Button = new WebComponent(options);
+ * // making html element string
+ * // in WebComponent scope
+ * htmlTemplate: htmlLiteral`${Button.tag(options).string}`
+ * ```
+ */
+/**
  * @template {{
  * [x: string]: ''
  * }} Slots
@@ -46,51 +57,52 @@ export class WebComponent {
 	 */
 	static callbackHandlerIdentifier = 'atla-as-cb';
 	/**
+	 * @typedef {Object} callbackHandlerValue
+	 * @property {tagOptionCCB} connected
+	 * @property {()=>void} [attributeChanged]
+	 * @property {()=>void} [adopted]
+	 * @property {void|(()=>void)} [disconnected]
+	 */
+	/**
 	 * @private
 	 * @type {{
-	 * [callbackId:string]:{
-	 * connected:elementCreateConnectedCallbackType,
-	 * attributeChanged?:()=>void,
-	 * adopted?:()=>void,
-	 * disconnected?:void|(()=>void)
-	 * }
+	 * [callbackId:string]:callbackHandlerValue
 	 * }}
 	 */
 	callbackHandler = {};
 	/**
-	 * @type {string}
-	 */
-	tagName;
-	/**
-	 * @typedef {(options:{
-	 * propsManipulator:(props: Prop) => { value: string },
-	 * reactiveProps: Record.<Prop, Let<string>>,
-	 * shadowRoot:ShadowRoot,
-	 * thisElement:HTMLElement
-	 * })=>void|{
-	 * disconnectedCallback?:()=>void,
-	 * attributeChangedCallback?:()=>void,
-	 * adoptedCallback?:()=>void,
-	 * }
-	 * } elementCreateConnectedCallbackType
+	 * @typedef {Object} tagOptionCCBReturns
+	 * @property {function(): void} [disconnectedCallback] - A callback function invoked when the element is disconnected from the document.
+	 * @property {function(): void} [attributeChangedCallback] - A callback function invoked when an attribute of the element is changed.
+	 * @property {function(): void} [adoptedCallback] - A callback function invoked when the element is adopted into a new document.
 	 */
 	/**
-	 * @typedef {{
-	 * props?:Record.<Prop, string>,
-	 * slots?:Record.<SlotName, HTMLElement>,
-	 * attributes?:Record.<string, string>,
-	 * connectedCallback?:elementCreateConnectedCallbackType,
-	 * }} elementCreateOptionType
-	 * - connectedCallback: use this to add aditional (dis)connected callback
-	 * > - usefull for attaching eventListener and removing it;
+	 * @typedef {Object} tagOptionCCBArgs
+	 * @property {Record<Prop, Let<string>>} reactiveProps
+	 * @property {ShadowRoot} shadowRoot
+	 * @property {HTMLElement} thisElement
+	 */
+	/**
+	 * @typedef {(options:tagOptionCCBArgs)=>void|tagOptionCCBReturns} tagOptionCCB
+	 */
+	/**
+	 * @typedef {Object} tagReturn
+	 * @property {HTMLElement} element
+	 * @property {string} string
+	 * @property {ShadowRoot} shadowRoot
+	 * @property {string} attr
 	 */
 	/**
 	 * create element
-	 * @param {elementCreateOptionType} [options]
-	 * @returns {{element:HTMLElement,string:string,shadowRoot:ShadowRoot,attr:string}}
+	 * @param {Object} [options]
+	 * @param {Record.<Prop, string>} [options.props]
+	 * @param {Record.<SlotName, HTMLElement>} [options.slots]
+	 * @param {Record.<string, string>} [options.attributes]
+	 * @param {tagOptionCCB} [options.connectedCallback]
+	 * @returns {tagReturn}
 	 */
 	tag = ({ props, slots, attributes, connectedCallback } = {}) => {
-		const element = document.createElement(this.validatedTag);
+		const element = document.createElement(this.tagName);
 		for (const prop in props) {
 			element.setAttribute(prop, props[prop]);
 		}
@@ -118,10 +130,9 @@ export class WebComponent {
 		};
 	};
 	/**
-	 * @private
 	 * @type {string}
 	 */
-	validatedTag;
+	tagName;
 	/**
 	 * @typedef {()=>void} voidFnType
 	 * @typedef {(options:{propName:Prop, oldValue:string, newValue:string})=>void} attributeChangedCallbackType
@@ -136,7 +147,6 @@ export class WebComponent {
 	 * @typedef CustomElementParameters
 	 * @property {defaultProps} [defaultProps]
 	 * @property {(options:{
-	 * propsManipulator:(props: Prop) => { value: string },
 	 * reactiveProps: Record.<Prop, Let<string>>,
 	 * createSlot:(slotName:SlotName)=>string,
 	 * shadowRoot:ShadowRoot,
@@ -155,6 +165,7 @@ export class WebComponent {
 	 * @property {string} [tagName]
 	 * @property {string[]} [importStyles]
 	 * - absolute path
+	 * @property {typeof HTMLElement} [extendsElement]
 	 */
 	/**
 	 * @param {CustomElementParameters} options
@@ -163,13 +174,13 @@ export class WebComponent {
 		const {
 			defaultProps = {},
 			lifecycle,
-			tagPrefix = 'hf-wc',
+			tagPrefix = 'atla-as-wc',
 			tagName = WebComponent.generateTag(),
 			importStyles = [],
 			slots,
+			extendsElement = HTMLElement,
 		} = options;
-		this.tagName = tagName;
-		this.validatedTag = WebComponent.validateTag(`${tagPrefix}-${tagName}`);
+		this.tagName = WebComponent.validateTag(`${tagPrefix}-${tagName}`);
 		const thisCustomTag = this;
 		let htmlTemplate;
 		/**
@@ -192,13 +203,9 @@ export class WebComponent {
 		for (const prop in defaultProps) {
 			observedAttributes.push(prop);
 		}
-		/**
-		 * @type {Record.<Prop, Let<string>>}}
-		 */
-		// @ts-ignore
 		customElements.define(
-			this.validatedTag,
-			class extends HTMLElement {
+			this.tagName,
+			class CustomTag extends extendsElement {
 				/**
 				 * @type {HTMLTemplateElement}
 				 */
@@ -218,10 +225,18 @@ export class WebComponent {
 				static get observedAttributes() {
 					return observedAttributes;
 				}
+				/**
+				 * @param {string} style
+				 * @returns {string}
+				 */
+				static generateLinkCSS = (style) => {
+					return `<link rel="stylesheet" href="${style}">`;
+				};
 				connectedCallback() {
 					this.shadowRoot = this.attachShadow({ mode: 'open' });
 					this.template = document.createElement('template');
-					Ping.scoped({
+					Ping.manualScope({
+						runCheckAtFirst: true,
 						documentScope: this.shadowRoot,
 						scopedCallback: async () => {
 							for (const prop in defaultProps) {
@@ -237,32 +252,27 @@ export class WebComponent {
 								},
 								reactiveProps: this.reactiveProps,
 								shadowRoot: this.shadowRoot,
-								propsManipulator: (propName) => {
-									const this_ = this;
-									const propName_ = propName.toString();
-									return {
-										get value() {
-											return this_.getAttribute(propName_) ?? '';
-										},
-										set value(newValue) {
-											this.reactiveProps[propName].value = newValue;
-											this_.setAttribute(propName_, newValue);
-										},
-									};
-								},
 								thisElement: this,
 							};
 							({ htmlTemplate, connectedCallback = () => {} } =
 								lifecycle(connectedCallbackOptions));
-							let importStyles_ = [`@import url(${WebComponent.globalStyle});`];
+							let importedStyles = [];
+							if (WebComponent.globalStyle) {
+								importedStyles.push(
+									CustomTag.generateLinkCSS(WebComponent.globalStyle)
+								);
+							}
 							if (importStyles) {
 								for (let i = 0; i < importStyles.length; i++) {
 									const style = importStyles[i];
-									importStyles_.push(`@import url(${style});`);
+									importedStyles.push(CustomTag.generateLinkCSS(style));
 								}
-								htmlTemplate = /* HTML */ `<style>
-										${importStyles_.join('')}
-									</style>
+								htmlTemplate = /* HTML */ `<div
+										style="display: none;"
+										aria-hidden="true"
+									>
+										${importedStyles.join('')}
+									</div>
 									${htmlTemplate}`;
 							}
 							this.template.innerHTML = htmlTemplate;
@@ -304,7 +314,8 @@ export class WebComponent {
 				 * @param {string} newValue
 				 */
 				attributeChangedCallback(propName, oldValue, newValue) {
-					Ping.scoped({
+					Ping.manualScope({
+						runCheckAtFirst: true,
 						documentScope: this.shadowRoot,
 						scopedCallback: async () => {
 							if (attributeChangedCallback) {
@@ -324,7 +335,8 @@ export class WebComponent {
 					});
 				}
 				async disconnectedCallback() {
-					Ping.scoped({
+					Ping.manualScope({
+						runCheckAtFirst: true,
 						documentScope: this.shadowRoot,
 						scopedCallback: async () => {
 							if (disconnectedCallback) {
@@ -345,7 +357,8 @@ export class WebComponent {
 					});
 				}
 				adoptedCallback() {
-					Ping.scoped({
+					Ping.manualScope({
+						runCheckAtFirst: true,
 						documentScope: this.shadowRoot,
 						scopedCallback: async () => {
 							if (adoptedCallback) {

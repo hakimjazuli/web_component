@@ -20,13 +20,14 @@
 	],
 	"license": "MIT",
 	"scripts": {
-		"dev": "concurrently \"bun ./dev/index.mjs\" \"bun tsc --watch\"",
+		"dev": "concurrently --raw \"bun ./dev/index.mjs\"",
 		"test": "echo \"Error: no test specified\" && exit 1"
 	},
 	"dependencies": {
 		"@html_first/simple_signal": "^2.6.1"
 	},
 	"devDependencies": {
-		"@html_first/js_lib_template": "^0.8.2"
+		"@html_first/js_lib_template": "link:@html_first/js_lib_template",
+		"vite": "^5.4.5"
 	}
 }

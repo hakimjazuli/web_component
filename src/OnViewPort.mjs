@@ -4,7 +4,19 @@ import { OnViewPort as OnViewPort_ } from '@html_first/simple_signal';
 import { spaHelper } from './spaHelper.mjs';
 
 /**
- * - viewport observer;
+ * @description
+ * monitor element attached with Intstance `attr` property
+ * ```js
+ * // in WebComponent scope
+ * const componentExample = new WebComponent({
+ * 	lifecycle:()=>{
+ * 		const onViewPortExample = new OnViewPort(options);
+ * 		return {
+ * 			htmlTemplate: htmlLiteral`<div ${onViewPortExample.attr}></div>`
+ * 			}
+ * 		}
+ * 	})
+ * ```
  */
 export class OnViewPort extends OnViewPort_ {
 	/**
@@ -21,4 +33,5 @@ export class OnViewPort extends OnViewPort_ {
 			documentScope
 		);
 	}
+	attr = spaHelper.attr;
 }

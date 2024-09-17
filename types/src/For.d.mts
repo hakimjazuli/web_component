@@ -16,16 +16,15 @@ export class For<ListTemplate extends {
      * @typedef {Let<Array<Record<keyof NonNullable<ListTemplate>, Let<string>>>>} derivedListType
      */
     /**
-     * @param {{
-     * listTemplate:ListTemplate,
-     * childElement:HTMLElement,
-     * addParentElement?:HTMLElement|ShadowRoot
-     * }} options
+     * @param {Object} options
+     * @param {ListTemplate} options.listTemplate
+     * @param {HTMLElement} options.childElement
+     * @param {HTMLElement|ShadowRoot} [options.withParentElement]
      */
-    constructor({ listTemplate, childElement, addParentElement }: {
+    constructor({ listTemplate, childElement, withParentElement }: {
         listTemplate: ListTemplate;
         childElement: HTMLElement;
-        addParentElement?: HTMLElement | ShadowRoot;
+        withParentElement?: HTMLElement | ShadowRoot;
     });
     /**
      * @private
@@ -36,7 +35,7 @@ export class For<ListTemplate extends {
      * @private
      * @type {HTMLElement|ShadowRoot|undefined}
      */
-    private addParentElement;
+    private withParentElement;
     /**
      * @type {derivedListType}
      */
@@ -47,9 +46,11 @@ export class For<ListTemplate extends {
      */
     private alreadyAssigned;
     /**
-     * @param {{
-     * assignData:()=>Promise<derivedListType["value"]>
-     * }} options
+     * @typedef {Object} tagOptions
+     * @property {()=>Promise<derivedListType["value"]>} assignData
+     */
+    /**
+     * @param {tagOptions} options
      */
     tag: ({ assignData }: {
         assignData: () => Promise<Record<keyof NonNullable<ListTemplate>, Let<string>>[]>;

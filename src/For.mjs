@@ -6,6 +6,30 @@ import { Ping } from './Ping.mjs';
 import { Let } from './Let.mjs';
 
 /**
+ * @description
+ * `data and looped component` helper;
+ * - create new instance of this class globally to define data list that are to be rendered or might be refenced;
+ * ```js
+ * // @ts-check
+ * import { For } from "@html_first/web_component"
+ *
+ * const forExample = new For({options})
+ * ```
+ * - assigning rendered html to `WebComponent`
+ * ```js
+ * // in WebComponent scope
+ * htmlTemplate: htmlLiteral`forExample.tag(options).string`;
+ * ```
+ * - modify data
+ * ```js
+ * // in WebComponent scope
+ * const index = 0; // modify index0 of the for.data;
+ * const dataKey = "value";
+ * // const dataKey = "innerHTML"; the key is defined on class instantiation `options.listTemplate`
+ * forExample.data[index][dataKey];
+ * ```
+ */
+/**
  * - handling looped tag
  * @template {{
  * [x: string]: ''
@@ -24,23 +48,26 @@ export class For {
 	 * @typedef {Let<Array<Record<keyof NonNullable<ListTemplate>, Let<string>>>>} derivedListType
 	 */
 	/**
-	 * @param {{
-	 * listTemplate:ListTemplate,
-	 * childElement:HTMLElement,
-	 * addParentElement?:HTMLElement|ShadowRoot
-	 * }} options
+	 * @param {Object} options
+	 * @param {ListTemplate} options.listTemplate
+	 * @param {HTMLElement} options.childElement
+	 * @param {HTMLElement|ShadowRoot} [options.withParentElement]
 	 */
-	constructor({ listTemplate, childElement, addParentElement }) {
+	constructor({ listTemplate, childElement, withParentElement }) {
 		this.listTemplate = listTemplate;
-		this.addParentElement = addParentElement;
+		this.withParentElement = withParentElement;
 		/**
 		 * - data is generated to make the `childData` scoped on the `childData` instantiation scope, and to;
 		 * - make `thisInstance.data` can be accessed outside the `childData` scope for `$` and stuffs;
 		 */
-		this.data = new Let([]);
+		this.data = Let.dataOnly([]);
 		this.childElement = childElement;
-		new $(async () => {
-			this.reflectData(this.data.value);
+		new $(async (first) => {
+			const value = this.data.value;
+			if (first) {
+				return;
+			}
+			this.reflectData(value);
 		});
 	}
 	/**
@@ -48,9 +75,11 @@ export class For {
 	 */
 	alreadyAssigned = false;
 	/**
-	 * @param {{
-	 * assignData:()=>Promise<derivedListType["value"]>
-	 * }} options
+	 * @typedef {Object} tagOptions
+	 * @property {()=>Promise<derivedListType["value"]>} assignData
+	 */
+	/**
+	 * @param {tagOptions} options
 	 */
 	tag = ({ assignData }) => {
 		if (this.alreadyAssigned) {
@@ -64,12 +93,13 @@ export class For {
 		this.alreadyAssigned = true;
 		return For.forTag.tag({
 			connectedCallback: ({ shadowRoot }) => {
-				Ping.scoped({
+				Ping.manualScope({
+					runCheckAtFirst: true,
 					documentScope: shadowRoot,
 					scopedCallback: async () => {
 						this.parentElement = shadowRoot;
-						if (this.addParentElement) {
-							shadowRoot.appendChild(this.addParentElement);
+						if (this.withParentElement) {
+							shadowRoot.appendChild(this.withParentElement);
 							const parent_ = shadowRoot.children[1];
 							if (parent_ instanceof HTMLElement) {
 								this.parentElement = parent_;
@@ -90,7 +120,7 @@ export class For {
 	 * @private
 	 * @type {HTMLElement|ShadowRoot|undefined}
 	 */
-	addParentElement;
+	withParentElement;
 	/**
 	 * @private
 	 * @type {ShadowRoot|HTMLElement}
@@ -159,7 +189,7 @@ export class For {
 		}
 		const elementIndex = indexOrSignal;
 		let dataIndex = indexOrSignal;
-		if (this.addParentElement) {
+		if (this.withParentElement) {
 			dataIndex--;
 		}
 		const child = this.parentElement.children[elementIndex];

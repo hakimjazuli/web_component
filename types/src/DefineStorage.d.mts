@@ -1,8 +1,8 @@
-export class Storage {
+export class DefineStorage {
     /**
-     * @type {Storage}
+     * @type {DefineStorage}
      */
-    static __: Storage;
+    static __: DefineStorage;
     /**
      * @private
      */
@@ -12,14 +12,13 @@ export class Storage {
      * @param {string} name
      * @returns {string}
      */
-    private static scopedName;
+    private static nameSpace;
     /**
      * @typedef {{[uniqueName:string]:string}} storageType
      * - value is for defaultValue;
-     * @param {{
-     * local?:storageType,
-     * session?:storageType,
-     * }} data
+     * @param {Object} data
+     * @param {storageType} [data.local]
+     * @param {storageType} [data.session]
      */
     constructor({ local, session }: {
         local?: {
@@ -29,6 +28,18 @@ export class Storage {
             [uniqueName: string]: string;
         };
     });
+    /**
+     * @type { storageType }
+     */
+    defaultLocal: {
+        [uniqueName: string]: string;
+    };
+    /**
+     * @type { storageType }
+     */
+    defaultSession: {
+        [uniqueName: string]: string;
+    };
     /**
      * @typedef {{[uniqueName:string]:Let<string>}} storageSignalType
      * @param {storageSignalType} local
@@ -45,5 +56,13 @@ export class Storage {
      * @param {string} defaultValue
      */
     private resolve;
+    refreshLocal: () => void;
+    refreshSession: () => void;
+    refreshBoth: () => void;
+    /**
+     * @private
+     * delete previously set by app, but no longer on the list;
+     */
+    private autoDeprecate;
 }
 import { Let } from './Let.mjs';

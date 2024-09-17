@@ -5,8 +5,16 @@ import { WebComponent } from './WebComponent.mjs';
 import { Derived } from './Derived.mjs';
 
 /**
+ * @description
  * - handling conditional string as `innerHTML`;
- *   > -   `WARNING!!!`: you better make sure the data is safe;
+ * ```js
+ * htmlTemplate: htmlLiteral`${new If.tag(options).string}`
+ * ```
+ * > - the functionality is the same with using:
+ * ```js
+ * htmlTemplate: htmlLiteral`<div ${derivedIntance.attr}="innerHTML"></div>`
+ * ```
+ * > -   `WARNING!!!`: you better make sure the data is safe;
  */
 export class If {
 	/**
@@ -24,7 +32,7 @@ export class If {
 	 * @param {()=>Promise<string>} stringLogic
 	 */
 	static tag = (stringLogic) => {
-		const elem = If.IfTag.tag({
+		const returnTagType = If.IfTag.tag({
 			connectedCallback: ({ shadowRoot }) => {
 				const derivedString = new Derived(stringLogic);
 				new $(async () => {
@@ -37,6 +45,6 @@ export class If {
 				};
 			},
 		});
-		return elem;
+		return returnTagType;
 	};
 }

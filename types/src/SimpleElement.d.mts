@@ -4,11 +4,11 @@
  */
 export class SimpleElement {
     /**
+     * @param {Object} options
+     * @param {string} options.tagName
      * @param {{
-     * tagName:string,
-     * attributeNProperty?: {
      * [attrNameNPropName:string]:string
-     * }}} options
+     * }} [options.attributeNProperty]
      */
     constructor({ tagName, attributeNProperty }: {
         tagName: string;

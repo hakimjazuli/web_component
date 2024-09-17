@@ -109,48 +109,50 @@ export class WebComponent<Slots extends {
         importStyles?: string[];
     });
     /**
+     * @typedef {Object} callbackHandlerValue
+     * @property {tagOptionCCB} connected
+     * @property {()=>void} [attributeChanged]
+     * @property {()=>void} [adopted]
+     * @property {void|(()=>void)} [disconnected]
+     */
+    /**
      * @private
      * @type {{
-     * [callbackId:string]:{
-     * connected:elementCreateConnectedCallbackType,
-     * attributeChanged?:()=>void,
-     * adopted?:()=>void,
-     * disconnected?:void|(()=>void)
-     * }
+     * [callbackId:string]:callbackHandlerValue
      * }}
      */
     private callbackHandler;
     /**
-     * @type {string}
-     */
-    tagName: string;
-    /**
-     * @typedef {(options:{
-     * propsManipulator:(props: Prop) => { value: string },
-     * reactiveProps: Record.<Prop, Let<string>>,
-     * shadowRoot:ShadowRoot,
-     * thisElement:HTMLElement
-     * })=>void|{
-     * disconnectedCallback?:()=>void,
-     * attributeChangedCallback?:()=>void,
-     * adoptedCallback?:()=>void,
-     * }
-     * } elementCreateConnectedCallbackType
+     * @typedef {Object} tagOptionCCBReturns
+     * @property {function(): void} [disconnectedCallback] - A callback function invoked when the element is disconnected from the document.
+     * @property {function(): void} [attributeChangedCallback] - A callback function invoked when an attribute of the element is changed.
+     * @property {function(): void} [adoptedCallback] - A callback function invoked when the element is adopted into a new document.
      */
     /**
-     * @typedef {{
-     * props?:Record.<Prop, string>,
-     * slots?:Record.<SlotName, HTMLElement>,
-     * attributes?:Record.<string, string>,
-     * connectedCallback?:elementCreateConnectedCallbackType,
-     * }} elementCreateOptionType
-     * - connectedCallback: use this to add aditional (dis)connected callback
-     * > - usefull for attaching eventListener and removing it;
+     * @typedef {Object} tagOptionCCBArgs
+     * @property {(props: Prop) => { value: string }} propsManipulator
+     * @property {Record<Prop, Let<string>>} reactiveProps
+     * @property {ShadowRoot} shadowRoot
+     * @property {HTMLElement} thisElement
+     */
+    /**
+     * @typedef {(options:tagOptionCCBArgs)=>void|tagOptionCCBReturns} tagOptionCCB
+     */
+    /**
+     * @typedef {Object} tagReturn
+     * @property {HTMLElement} element
+     * @property {string} string
+     * @property {ShadowRoot} shadowRoot
+     * @property {string} attr
      */
     /**
      * create element
-     * @param {elementCreateOptionType} [options]
-     * @returns {{element:HTMLElement,string:string,shadowRoot:ShadowRoot,attr:string}}
+     * @param {Object} [options]
+     * @param {Record.<Prop, string>} [options.props]
+     * @param {Record.<SlotName, HTMLElement>} [options.slots]
+     * @param {Record.<string, string>} [options.attributes]
+     * @param {tagOptionCCB} [options.connectedCallback]
+     * @returns {tagReturn}
      */
     tag: ({ props, slots, attributes, connectedCallback }?: {
         props?: Record<Prop, string>;
@@ -164,8 +166,17 @@ export class WebComponent<Slots extends {
             shadowRoot: ShadowRoot;
             thisElement: HTMLElement;
         }) => void | {
+            /**
+             * - A callback function invoked when the element is disconnected from the document.
+             */
             disconnectedCallback?: () => void;
+            /**
+             * - A callback function invoked when an attribute of the element is changed.
+             */
             attributeChangedCallback?: () => void;
+            /**
+             * - A callback function invoked when the element is adopted into a new document.
+             */
             adoptedCallback?: () => void;
         };
     }) => {
@@ -175,9 +186,8 @@ export class WebComponent<Slots extends {
         attr: string;
     };
     /**
-     * @private
      * @type {string}
      */
-    private validatedTag;
+    tagName: string;
 }
 import { Let } from './Let.mjs';
